@@ -256,13 +256,3 @@ O sistema será considerado funcional quando puder:
 9. IA detectar tendências fora do normal
 10. Auditor digital aprovado
 
----
-
-# ✔ Documento concluído.
-
-Se quiseres agora:
-👉 **"Avança com o 05 – UI/UX Guidelines"**
-ou
-👉 **"Avança com o 05 – Tech Spec"**
-
-Só dizer qual versão preferes para o próximo capítulo.
