@@ -59,7 +59,10 @@ export default function EntityFormsPage() {
     const getTargetModule = (type: string): string => {
         const mapping: Record<string, string> = {
             'production_lot': 'production-lots',
+            'intermediate_lot': 'intermediate-lots',
+            'finished_lot': 'finished-lots',
             'raw_material': 'raw-materials',
+            'raw_material_lot': 'raw-material-lots',
             'lab_test': 'lab-tests',
             'audit': 'audits',
             'supplier': 'suppliers',

@@ -43,7 +43,10 @@ export interface SelectOption {
 export type FormModule =
     | 'general'
     | 'production-lots'
+    | 'intermediate-lots'
+    | 'finished-lots'
     | 'raw-materials'
+    | 'raw-material-lots'
     | 'lab-tests'
     | 'audits'
     | 'food-safety'

@@ -13,47 +13,49 @@ function getClient(): SupabaseClient {
  */
 export async function getDashboardMetrics() {
     const supabase = getClient();
-    const [{ data: released }, { data: nc }, { data: pcc }, { data: turnaround }, { data: trainings }, { data: quarantine }] = await Promise.all([
-        // Lotes liberados (last 24h)
+    const now = Date.now();
+
+    const [
+        { count: releasedCount },
+        { count: ncCount },
+        { data: pcc },
+        { data: turnaround },
+        { count: trainingsCount },
+        { count: quarantineCount },
+    ] = await Promise.all([
         supabase
             .from("finished_product_lots")
             .select("id", { count: "exact", head: true })
             .eq("status", "liberado")
-            .gte("analyzed_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
-        // NCs críticas abertas
+            .gte("analyzed_at", new Date(now - 24 * 60 * 60 * 1000).toISOString()),
         supabase
             .from("non_conformities")
             .select("id", { count: "exact", head: true })
             .eq("severity", "critical")
             .is("closed_at", null),
-        // Precisão PCC (last 72h)
         supabase
             .from("pcc_records")
             .select("status")
-            .gte("created_at", new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()),
-        // Lab turnaround average (minutes, last 24h)
+            .gte("created_at", new Date(now - 72 * 60 * 60 * 1000).toISOString()),
         supabase
             .from("samples")
-            .select("collected_at", "analyzed_at")
-            .gte("analyzed_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
-        // Active trainings
+            .select("collected_at, analyzed_at")
+            .gte("analyzed_at", new Date(now - 24 * 60 * 60 * 1000).toISOString()),
         supabase
             .from("trainings")
             .select("id", { count: "exact", head: true })
             .eq("status", "active"),
-        // Materials in quarantine
         supabase
             .from("raw_material_lots")
             .select("id", { count: "exact", head: true })
             .eq("status", "quarantine"),
     ]);
 
-    // Compute derived values
-    const releasedCount = released?.length ?? 0;
-    const ncCount = nc?.length ?? 0;
+    const releasedTotal = releasedCount ?? 0;
+    const ncTotal = ncCount ?? 0;
     const pccPrecision =
-        pcc?.length && pcc?.filter((r: any) => r.status === "approved").length
-            ? (pcc?.filter((r: any) => r.status === "approved").length * 100) / pcc?.length
+        pcc?.length && pcc.filter((r: any) => r.status === "approved").length
+            ? (pcc.filter((r: any) => r.status === "approved").length * 100) / pcc.length
             : 0;
     const avgTurnaround =
         turnaround?.length
@@ -63,16 +65,16 @@ export async function getDashboardMetrics() {
                 return sum + (end - start) / 60000; // minutes
             }, 0) / turnaround.length
             : 0;
-    const trainingsCount = trainings?.length ?? 0;
-    const quarantineCount = quarantine?.length ?? 0;
+    const trainingsTotal = trainingsCount ?? 0;
+    const quarantineTotal = quarantineCount ?? 0;
 
     return {
-        releasedCount,
-        ncCount,
+        releasedCount: releasedTotal,
+        ncCount: ncTotal,
         pccPrecision: pccPrecision.toFixed(1) + "%",
         avgTurnaround: Math.round(avgTurnaround) + " min",
-        trainingsCount,
-        quarantineCount,
+        trainingsCount: trainingsTotal,
+        quarantineCount: quarantineTotal,
     };
 }
 
@@ -82,7 +84,6 @@ export async function getDashboardMetrics() {
  */
 export async function getProcessData(parameter: string, timeRange: string) {
     const supabase = getClient();
-    // Determine start date based on timeRange
     let startDate = new Date();
     switch (timeRange) {
         case "24h":
@@ -110,7 +111,6 @@ export async function getProcessData(parameter: string, timeRange: string) {
 
     if (error) throw error;
 
-    // Transform to chart format
     const chartData = data?.map((row: any) => ({
         time: new Date(row.analysis_date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         value: Number(row.result_value),
@@ -127,12 +127,9 @@ export async function getProductDistribution() {
     const supabase = getClient();
     const { data, error } = await supabase
         .from("finished_product_lots")
-        .select("sku, id", { count: "exact", head: false })
-        .gte("analyzed_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-        .group("sku")
-        .select("sku", { count: "exact", head: false });
+        .select("sku")
+        .gte("analyzed_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
     if (error) throw error;
-    // Count per SKU
     const counts: Record<string, number> = {};
     data?.forEach((row: any) => {
         counts[row.sku] = (counts[row.sku] || 0) + 1;
@@ -187,7 +184,6 @@ export async function getTopAnalysts() {
         const id = row.analyst_id;
         counts[id] = (counts[id] || 0) + 1;
     });
-    // fetch user names
     const analystIds = Object.keys(counts);
     const { data: users } = await supabase.from("users").select("id, name").in("id", analystIds);
     const result = analystIds
@@ -225,14 +221,12 @@ export async function getCapabilityMetrics() {
         .select("line, brix, ph, density, co2, status")
         .gte("analyzed_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
     if (error) throw error;
-    // Simple placeholder calculation – real Cpk would need spec limits
     const lines: Record<string, { cpk: number; oos: number }> = {};
     data?.forEach((row: any) => {
         const line = row.line;
         if (!lines[line]) lines[line] = { cpk: 0, oos: 0 };
-        // fake Cpk based on variance (placeholder)
-        lines[line].cpk = Math.random() * 2 + 1; // 1‑3 range
-        lines[line].oos = Math.random() * 5; // 0‑5%
+        lines[line].cpk = Math.random() * 2 + 1; // placeholder
+        lines[line].oos = Math.random() * 5; // placeholder
     });
     return Object.entries(lines).map(([line, v]) => ({ line, ...v }));
 }
@@ -240,7 +234,7 @@ export async function getCapabilityMetrics() {
 /** Instant alerts (critical NCs, pending audits, expiring trainings) */
 export async function getInstantAlerts() {
     const supabase = getClient();
-    const [{ data: criticalNC }, { data: pendingAudits }, { data: expiringTrainings }] = await Promise.all([
+    const [{ count: criticalNC }, { count: pendingAudits }, { count: expiringTrainings }] = await Promise.all([
         supabase
             .from("non_conformities")
             .select("id", { count: "exact", head: true })
@@ -257,9 +251,9 @@ export async function getInstantAlerts() {
             .eq("status", "active"),
     ]);
     return {
-        criticalNC: criticalNC?.length ?? 0,
-        pendingAudits: pendingAudits?.length ?? 0,
-        expiringTrainings: expiringTrainings?.length ?? 0,
+        criticalNC: criticalNC ?? 0,
+        pendingAudits: pendingAudits ?? 0,
+        expiringTrainings: expiringTrainings ?? 0,
     };
 }
 
@@ -290,10 +284,9 @@ export async function getAnalysisTotal(period: "daily" | "weekly" | "monthly" = 
             start.setMonth(start.getMonth() - 1);
             break;
     }
-    const { data, error } = await supabase
+    const { count } = await supabase
         .from("lab_analyses")
         .select("id", { count: "exact", head: true })
         .gte("analysis_date", start.toISOString());
-    if (error) throw error;
-    return data?.length ?? 0;
+    return count ?? 0;
 }

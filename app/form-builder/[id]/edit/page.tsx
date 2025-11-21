@@ -249,7 +249,10 @@ export default function FormBuilderEditorPage() {
                                                     <SelectContent>
                                                         <SelectItem value="general">General / All</SelectItem>
                                                         <SelectItem value="production-lots">Production Lots</SelectItem>
+                                                        <SelectItem value="intermediate-lots">Intermediate Lots</SelectItem>
+                                                        <SelectItem value="finished-lots">Finished Lots</SelectItem>
                                                         <SelectItem value="raw-materials">Raw Materials</SelectItem>
+                                                        <SelectItem value="raw-material-lots">Raw Material Lots</SelectItem>
                                                         <SelectItem value="lab-tests">Lab Tests</SelectItem>
                                                         <SelectItem value="audits">Audits</SelectItem>
                                                         <SelectItem value="food-safety">Food Safety</SelectItem>
