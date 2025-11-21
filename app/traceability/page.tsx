@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { Search, Sparkles, Filter, Download, FileDown } from "lucide-react";
 import { toast } from "sonner";
 
 export default function TraceabilityPage() {
+    const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedLot, setSelectedLot] = useState<any>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -81,17 +83,15 @@ export default function TraceabilityPage() {
             toast.error("Digite um código de lote para buscar");
             return;
         }
-        toast.success(`Buscando por: ${searchQuery}`);
-        // TODO: Implement actual search logic
+        // Navigate to detail page
+        router.push(`/traceability/${encodeURIComponent(searchQuery.toUpperCase())}`);
     };
 
     const handleExport = () => {
         toast.success("Exportando dados de rastreabilidade...");
-        // TODO: Implement export functionality
     };
 
     const handleViewDetail = (id: string, type: string) => {
-        // Mock data for demonstration
         const mockLot = {
             id,
             code: productionChains.find(c => c.lote_pai_id === id)?.lote_pai || "LOT-UNKNOWN",
@@ -112,10 +112,8 @@ export default function TraceabilityPage() {
 
     return (
         <AppShell>
-            {/* Fixed max-width container for proper responsiveness */}
             <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
 
-                {/* Ultra-premium header */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div className="space-y-1.5">
                         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -138,14 +136,13 @@ export default function TraceabilityPage() {
                             <Download className="h-4 w-4" />
                             <span className="hidden sm:inline">Exportar</span>
                         </Button>
-                        <Button size="sm" className="gap-2" onClick={() => handleViewDetail(productionChains[0].lote_pai_id, "production")}>
+                        <Button size="sm" className="gap-2" onClick={() => router.push("/traceability/PL-240915-01")}>
                             <FileDown className="h-4 w-4" />
                             <span className="hidden sm:inline">Abrir lote em detalhe</span>
                         </Button>
                     </div>
                 </div>
 
-                {/* Flow Timeline - Ultra clean */}
                 <div className="bg-card border rounded-2xl p-6 shadow-sm">
                     <h3 className="text-base font-semibold mb-1">Fluxo SmartLab</h3>
                     <p className="text-sm text-muted-foreground mb-5">Passos conectados e coloridos por domínio</p>
@@ -157,7 +154,6 @@ export default function TraceabilityPage() {
                     </div>
                 </div>
 
-                {/* Search - Clean and functional */}
                 <div className="bg-card border rounded-xl p-4 shadow-sm">
                     <div className="flex flex-col sm:flex-row gap-3">
                         <div className="relative flex-1">
@@ -177,13 +173,11 @@ export default function TraceabilityPage() {
                     </div>
                 </div>
 
-                {/* Two column layout - Proper spacing */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <RecentEvents events={recentEvents} />
                     <MonitoredProduction chains={productionChains} onViewDetail={handleViewDetail} />
                 </div>
 
-                {/* Stats - Clean grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {[
                         { label: "Lotes ativos", value: "3", color: "blue" },
@@ -199,7 +193,6 @@ export default function TraceabilityPage() {
                 </div>
             </div>
 
-            {/* Detail Modal */}
             <LotDetailModal
                 lot={selectedLot}
                 isOpen={isDetailOpen}

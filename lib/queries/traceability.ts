@@ -124,3 +124,48 @@ export async function searchLotByCode(code: string) {
         finished_lots: finResult.data || []
     };
 }
+export async function getLotDetail(lotCode: string) {
+    // Search across all lot tables
+    const results = await searchLotByCode(lotCode);
+
+    // Production lot takes precedence
+    if (results.production_lots?.length) {
+        const prodLot = results.production_lots[0];
+        const genealogy = await traceFromProductionLot(prodLot.id);
+        return { type: "production" as const, data: prodLot, genealogy };
+    }
+
+    // Then finished lot
+    if (results.finished_lots?.length) {
+        const finLot = results.finished_lots[0];
+        const genealogy = await traceFromFinishedLot(finLot.id);
+        return { type: "finished" as const, data: finLot, genealogy };
+    }
+
+    // Then intermediate lot
+    if (results.intermediate_lots?.length) {
+        const intLot = results.intermediate_lots[0];
+        const supabase = createClient();
+        const { data: prodLot } = await supabase
+            .from("production_lots")
+            .select("*")
+            .eq("id", intLot.production_lot_id)
+            .single();
+        const { data: finishedLots } = await supabase
+            .from("finished_lots")
+            .select("*")
+            .eq("intermediate_lot_id", intLot.id);
+        return {
+            type: "intermediate" as const,
+            data: intLot,
+            genealogy: {
+                production_lot: prodLot as any,
+                intermediate_lots: [intLot],
+                finished_lots: finishedLots || [],
+            },
+        };
+    }
+
+    // Not found
+    return null;
+}

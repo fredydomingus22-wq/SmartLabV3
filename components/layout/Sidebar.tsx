@@ -18,7 +18,8 @@ import {
     LineChart,
     Box,
     PackageCheck,
-    Building2
+    Building2,
+    GitBranch
 } from "lucide-react"
 
 const sidebarItems = [
@@ -32,6 +33,7 @@ const sidebarItems = [
     { name: "Suppliers", href: "/suppliers", icon: Building2 },
     { name: "Lab Tests", href: "/lab-tests", icon: FlaskConical },
     { name: "SPC Engine", href: "/spc/dashboard", icon: LineChart },
+    { name: "Traceability", href: "/traceability", icon: GitBranch },
     { name: "Food Safety", href: "/food-safety/pcc", icon: ShieldCheck },
     { name: "Non-Conformities", href: "/nc", icon: AlertTriangle },
     { name: "Audits", href: "/audits", icon: ClipboardCheck },
