@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/AppShell";
+import { ChartErrorBoundary } from "@/components/ui/ChartErrorBoundary";
 import { WelcomeSection } from "@/components/dashboard/WelcomeSection";
 import { InstantAlerts } from "@/components/dashboard/InstantAlerts";
 import { ProcessWindow } from "@/components/dashboard/ProcessWindow";
@@ -25,14 +26,20 @@ export default function DashboardPage() {
 
                 {/* Process Window and Analysis Total */}
                 <div className="grid gap-6 md:grid-cols-3">
-                    <ProcessWindow />
+                    <ChartErrorBoundary>
+                        <ProcessWindow />
+                    </ChartErrorBoundary>
                     <AnalysisTotal />
                 </div>
 
                 {/* Product Distribution and Line Activity */}
                 <div className="grid gap-6 md:grid-cols-2">
-                    <ProductDistribution />
-                    <LineActivity />
+                    <ChartErrorBoundary>
+                        <ProductDistribution />
+                    </ChartErrorBoundary>
+                    <ChartErrorBoundary>
+                        <LineActivity />
+                    </ChartErrorBoundary>
                 </div>
 
                 {/* KPI Cards Grid */}
@@ -86,7 +93,9 @@ export default function DashboardPage() {
 
                 {/* Bottom Section */}
                 <div className="grid gap-6 md:grid-cols-3">
-                    <ReleasedBlockedLots />
+                    <ChartErrorBoundary>
+                        <ReleasedBlockedLots />
+                    </ChartErrorBoundary>
                     <div className="space-y-6">
                         <CapabilityWindow />
                         <ShiftNotes />

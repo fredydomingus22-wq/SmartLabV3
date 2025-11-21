@@ -17,6 +17,11 @@ create table public.parameters (
   unit text,
   type text check (type in ('numeric', 'text', 'boolean', 'file')),
   criticality text check (criticality in ('critical', 'major', 'minor')),
+  method text,
+  spec_min numeric,
+  spec_target numeric,
+  spec_max numeric,
+  frequency text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -45,7 +50,13 @@ create table public.production_lots (
   id uuid default uuid_generate_v4() primary key,
   code text unique not null,
   product_id uuid references public.products(id),
+  factory_id uuid references public.profiles(id),
+  production_line text,
+  shift text,
+  start_time timestamp with time zone,
+  end_time timestamp with time zone,
   status text default 'open',
+  created_by uuid references public.profiles(id),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -54,6 +65,13 @@ create table public.intermediate_lots (
   id uuid default uuid_generate_v4() primary key,
   production_lot_id uuid references public.production_lots(id),
   code text unique not null,
+  tank text,
+  brix numeric,
+  ph numeric,
+  acidity numeric,
+  ingredients json,
+  prepared_at timestamp with time zone,
+  status text default 'pending',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -62,16 +80,38 @@ create table public.finished_lots (
   id uuid default uuid_generate_v4() primary key,
   intermediate_lot_id uuid references public.intermediate_lots(id),
   code text unique not null,
+  line text,
+  co2 numeric,
+  brix numeric,
+  ph numeric,
+  density numeric,
   status text default 'quarantine',
+  analyzed_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- LAB TESTS / SAMPLES
 create table public.lab_tests (
   id uuid default uuid_generate_v4() primary key,
-  lot_id uuid, -- Polymorphic or specific FK depending on design, keeping simple for now
+  lot_id uuid,
   sample_type text,
   status text default 'pending',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Lab Analysis (full details)
+create table public.lab_analysis (
+  id uuid default uuid_generate_v4() primary key,
+  sample_id uuid references public.samples(id),
+  parameter_id uuid references public.parameters(id),
+  result_value numeric,
+  unit text,
+  limit_min numeric,
+  limit_max numeric,
+  analyst_id uuid references public.profiles(id),
+  analysis_date timestamp with time zone,
+  validation_status text check (validation_status in ('approved', 'failed', 'deviation')) default 'approved',
+  reviewer_id uuid references public.profiles(id),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -96,22 +136,6 @@ create table public.raw_material_lots (
 create table public.suppliers (
   id uuid default uuid_generate_v4() primary key,
   name text not null,
-  status text default 'active',
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- NC (Non-Conformities)
-create table public.nc (
-  id uuid default uuid_generate_v4() primary key,
-  description text not null,
-  severity text check (severity in ('critical', 'major', 'minor')),
-  status text default 'open',
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- AUDITS
-create table public.audits (
-  id uuid default uuid_generate_v4() primary key,
   type text not null,
   auditor_id uuid references public.profiles(id),
   status text default 'planned',
@@ -133,6 +157,7 @@ create table public.food_safety_prp (
   name text not null,
   area text,
   frequency text,
+  status text default 'active',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -140,6 +165,9 @@ create table public.food_safety_oprp (
   id uuid default uuid_generate_v4() primary key,
   name text not null,
   hazard text,
+  frequency text,
+  limit numeric,
+  status text default 'active',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -147,6 +175,7 @@ create table public.food_safety_pcc (
   id uuid default uuid_generate_v4() primary key,
   name text not null,
   critical_limit text,
+  status text default 'active',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -155,6 +184,7 @@ create table public.equipment (
   id uuid default uuid_generate_v4() primary key,
   name text not null,
   calibration_due date,
+  last_calibrated timestamp with time zone,
   status text default 'active',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -165,6 +195,8 @@ create table public.reagents (
   name text not null,
   expiry_date date,
   stock_level numeric,
+  unit text,
+  last_used timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
