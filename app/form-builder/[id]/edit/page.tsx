@@ -12,12 +12,32 @@ import {
     getFormTemplateById,
     createFormField,
     updateFormField,
-    deleteFormField
+    deleteFormField,
+    updateFormTemplate
 } from "@/lib/queries/form-builder";
-import type { FormTemplateWithFields, FormField, FieldType } from "@/types/form-builder";
+import type { FormTemplateWithFields, FormField, FieldType, FormModule, FormCategory } from "@/types/form-builder";
 import { Loader } from "@/components/ui/Loader";
-import { Save, Eye, ArrowLeft } from "lucide-react";
+import { Save, Eye, ArrowLeft, Settings } from "lucide-react";
 import Link from "next/link";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 export default function FormBuilderEditorPage() {
     const params = useParams();
@@ -28,10 +48,38 @@ export default function FormBuilderEditorPage() {
     const [selectedField, setSelectedField] = useState<FormField | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
 
     useEffect(() => {
         loadTemplate();
     }, [templateId]);
+
+    const handleUpdateTemplateSettings = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!template) return;
+        setSaving(true);
+
+        const formData = new FormData(e.currentTarget);
+        const updates = {
+            name: formData.get('name') as string,
+            description: formData.get('description') as string,
+            category: formData.get('category') as FormCategory,
+            target_module: formData.get('target_module') as FormModule,
+        };
+
+        try {
+            const { data, error } = await updateFormTemplate(template.id, updates);
+            if (error) throw error;
+
+            setTemplate(prev => prev ? { ...prev, ...updates } : null);
+            setSettingsOpen(false);
+        } catch (error) {
+            console.error('Error updating template:', error);
+            alert('Failed to update template settings');
+        } finally {
+            setSaving(false);
+        }
+    };
 
     const loadTemplate = async () => {
         setLoading(true);
@@ -154,6 +202,78 @@ export default function FormBuilderEditorPage() {
                             </div>
                         </div>
                         <div className="flex gap-2">
+                            <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        Settings
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Template Settings</DialogTitle>
+                                        <DialogDescription>
+                                            Update the basic information for this form template.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <form onSubmit={handleUpdateTemplateSettings} className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="name">Name</Label>
+                                            <Input id="name" name="name" defaultValue={template.name} required />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="description">Description</Label>
+                                            <Textarea id="description" name="description" defaultValue={template.description} />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="category">Category</Label>
+                                                <Select name="category" defaultValue={template.category}>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="analysis">Analysis</SelectItem>
+                                                        <SelectItem value="inspection">Inspection</SelectItem>
+                                                        <SelectItem value="checklist">Checklist</SelectItem>
+                                                        <SelectItem value="monitoring">Monitoring</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="target_module">Target Module</Label>
+                                                <Select name="target_module" defaultValue={template.target_module || 'general'}>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="general">General / All</SelectItem>
+                                                        <SelectItem value="production-lots">Production Lots</SelectItem>
+                                                        <SelectItem value="raw-materials">Raw Materials</SelectItem>
+                                                        <SelectItem value="lab-tests">Lab Tests</SelectItem>
+                                                        <SelectItem value="audits">Audits</SelectItem>
+                                                        <SelectItem value="food-safety">Food Safety</SelectItem>
+                                                        <SelectItem value="traceability">Traceability</SelectItem>
+                                                        <SelectItem value="suppliers">Suppliers</SelectItem>
+                                                        <SelectItem value="trainings">Trainings</SelectItem>
+                                                        <SelectItem value="documents">Documents</SelectItem>
+                                                        <SelectItem value="nc">Non-Conformance</SelectItem>
+                                                        <SelectItem value="spc">SPC</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <DialogFooter>
+                                            <Button type="button" variant="outline" onClick={() => setSettingsOpen(false)}>
+                                                Cancel
+                                            </Button>
+                                            <Button type="submit" disabled={saving}>
+                                                {saving ? 'Saving...' : 'Save Changes'}
+                                            </Button>
+                                        </DialogFooter>
+                                    </form>
+                                </DialogContent>
+                            </Dialog>
                             <Button variant="outline" size="sm">
                                 <Eye className="mr-2 h-4 w-4" />
                                 Preview

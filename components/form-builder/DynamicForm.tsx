@@ -15,6 +15,10 @@ import {
 } from "./renderers/BasicRenderers";
 import { Loader } from "@/components/ui/Loader";
 import { shouldShowField } from "@/lib/form-builder/logic";
+import { Controller } from "react-hook-form";
+import { SignatureInput } from "@/components/form-runner/fields/SignatureInput";
+import { FileUpload } from "@/components/ui/file-upload";
+import { Label } from "@/components/ui/label";
 
 interface DynamicFormProps {
     template: FormTemplateWithFields;
@@ -82,6 +86,70 @@ export function DynamicForm({
                 return <DateFieldRenderer key={field.id} {...commonProps} />;
             case 'time':
                 return <TimeFieldRenderer key={field.id} {...commonProps} />;
+            case 'signature':
+                return (
+                    <Controller
+                        key={field.id}
+                        control={control}
+                        name={field.field_key}
+                        rules={{ required: field.is_required }}
+                        render={({ field: { onChange, value } }) => (
+                            <SignatureInput
+                                fieldKey={field.field_key}
+                                label={field.label}
+                                required={field.is_required}
+                                value={value}
+                                onChange={onChange}
+                                disabled={readOnly}
+                            />
+                        )}
+                    />
+                );
+            case 'file':
+                return (
+                    <div key={field.id} className="space-y-2">
+                        <Label>
+                            {field.label}
+                            {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                        </Label>
+                        <Controller
+                            control={control}
+                            name={field.field_key}
+                            rules={{ required: field.is_required }}
+                            render={({ field: { onChange, value } }) => (
+                                <>
+                                    {value ? (
+                                        <div className="flex items-center gap-2 p-2 border rounded bg-slate-50">
+                                            <span className="text-sm truncate flex-1">{value}</span>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => onChange('')}
+                                                disabled={readOnly}
+                                            >
+                                                Remove
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        !readOnly && (
+                                            <FileUpload
+                                                bucket="documents"
+                                                path="lab-tests"
+                                                label={`Upload ${field.label}`}
+                                                onUploadComplete={(path) => onChange(path)}
+                                            />
+                                        )
+                                    )}
+                                    {errors[field.field_key] && (
+                                        <p className="text-sm text-red-500">This field is required</p>
+                                    )}
+                                </>
+                            )}
+                        />
+                        {field.help_text && <p className="text-xs text-muted-foreground">{field.help_text}</p>}
+                    </div>
+                );
             // TODO: Implement other renderers
             default:
                 return (

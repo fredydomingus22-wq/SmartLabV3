@@ -9,7 +9,8 @@ export type FieldType =
     | 'datetime'
     | 'file'
     | 'textarea'
-    | 'parameter_link';
+    | 'parameter_link'
+    | 'signature';
 
 export type FormCategory = 'analysis' | 'inspection' | 'checklist' | 'monitoring';
 
@@ -39,11 +40,26 @@ export interface SelectOption {
     value: string;
 }
 
+export type FormModule =
+    | 'general'
+    | 'production-lots'
+    | 'raw-materials'
+    | 'lab-tests'
+    | 'audits'
+    | 'food-safety'
+    | 'traceability'
+    | 'suppliers'
+    | 'trainings'
+    | 'documents'
+    | 'nc'
+    | 'spc';
+
 export interface FormTemplate {
     id: string;
     name: string;
     description?: string;
     category: FormCategory;
+    target_module?: FormModule;
     active: boolean;
     created_by: string;
     created_at: string;

@@ -10,7 +10,7 @@ import {
 const supabase = createClient()
 
 // Form Templates
-export async function getFormTemplates(category?: string) {
+export async function getFormTemplates(category?: string, targetModule?: string) {
     let query = supabase
         .from('form_templates')
         .select('*')
@@ -19,6 +19,10 @@ export async function getFormTemplates(category?: string) {
 
     if (category) {
         query = query.eq('category', category)
+    }
+
+    if (targetModule) {
+        query = query.eq('target_module', targetModule)
     }
 
     const { data, error } = await query

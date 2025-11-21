@@ -11,7 +11,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createFormTemplate } from "@/lib/queries/form-builder";
-import type { FormCategory } from "@/types/form-builder";
+import type { FormCategory, FormModule } from "@/types/form-builder";
 
 export default function CreateFormTemplatePage() {
     const router = useRouter();
@@ -19,7 +19,8 @@ export default function CreateFormTemplatePage() {
     const [formData, setFormData] = useState({
         name: "",
         description: "",
-        category: "analysis" as FormCategory
+        category: "analysis" as FormCategory,
+        target_module: "general" as FormModule
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -87,6 +88,32 @@ export default function CreateFormTemplatePage() {
                                         <SelectItem value="inspection">Inspection</SelectItem>
                                         <SelectItem value="checklist">Checklist</SelectItem>
                                         <SelectItem value="monitoring">Monitoring</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="target_module">Target Module</Label>
+                                <Select
+                                    value={formData.target_module}
+                                    onValueChange={(value) => setFormData({ ...formData, target_module: value as FormModule })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a module (optional)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="general">General / All</SelectItem>
+                                        <SelectItem value="production-lots">Production Lots</SelectItem>
+                                        <SelectItem value="raw-materials">Raw Materials</SelectItem>
+                                        <SelectItem value="lab-tests">Lab Tests</SelectItem>
+                                        <SelectItem value="audits">Audits</SelectItem>
+                                        <SelectItem value="food-safety">Food Safety</SelectItem>
+                                        <SelectItem value="traceability">Traceability</SelectItem>
+                                        <SelectItem value="suppliers">Suppliers</SelectItem>
+                                        <SelectItem value="trainings">Trainings</SelectItem>
+                                        <SelectItem value="documents">Documents</SelectItem>
+                                        <SelectItem value="nc">Non-Conformance</SelectItem>
+                                        <SelectItem value="spc">SPC</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

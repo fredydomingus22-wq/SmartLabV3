@@ -19,7 +19,8 @@ import {
     Box,
     PackageCheck,
     Building2,
-    GitBranch
+    GitBranch,
+    TestTube
 } from "lucide-react"
 
 const sidebarItems = [
@@ -31,6 +32,7 @@ const sidebarItems = [
     { name: "Raw Materials", href: "/raw-materials", icon: PackageCheck },
     { name: "Raw Material Lots", href: "/raw-material-lots", icon: PackageCheck },
     { name: "Suppliers", href: "/suppliers", icon: Building2 },
+    { name: "Sample Management", href: "/lab/samples", icon: TestTube },
     { name: "Lab Tests", href: "/lab-tests", icon: FlaskConical },
     { name: "SPC Engine", href: "/spc/dashboard", icon: LineChart },
     { name: "Traceability", href: "/traceability", icon: GitBranch },
@@ -40,7 +42,6 @@ const sidebarItems = [
     { name: "Form Builder", href: "/form-builder", icon: Settings },
     { name: "Documents", href: "/documents", icon: FileText },
     { name: "Trainings", href: "/trainings", icon: Users },
-    { name: "Traceability", href: "/traceability", icon: History },
 ]
 
 export function Sidebar() {

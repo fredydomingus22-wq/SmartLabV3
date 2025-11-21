@@ -38,14 +38,37 @@ export default function EntityFormsPage() {
             if (templatesRes.error) throw templatesRes.error;
             if (submissionsRes.error) throw submissionsRes.error;
 
-            // Filter active templates
-            setTemplates(templatesRes.data?.filter(t => t.active) || []);
+            // Determine target module
+            const targetModule = getTargetModule(entityType);
+
+            // Filter active templates and by target module
+            const filteredTemplates = templatesRes.data?.filter(t =>
+                t.active &&
+                (t.target_module === targetModule || t.target_module === 'general' || !t.target_module)
+            ) || [];
+
+            setTemplates(filteredTemplates);
             setSubmissions(submissionsRes.data || []);
         } catch (error) {
             console.error('Error loading form data:', error);
         } finally {
             setLoading(false);
         }
+    };
+
+    const getTargetModule = (type: string): string => {
+        const mapping: Record<string, string> = {
+            'production_lot': 'production-lots',
+            'raw_material': 'raw-materials',
+            'lab_test': 'lab-tests',
+            'audit': 'audits',
+            'supplier': 'suppliers',
+            'training': 'trainings',
+            'document': 'documents',
+            'nc': 'nc',
+            'spc': 'spc'
+        };
+        return mapping[type] || 'general';
     };
 
     const getEntityTitle = () => {

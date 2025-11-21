@@ -7,7 +7,8 @@ import {
     FileText,
     Upload,
     ListOrdered,
-    Link2
+    Link2,
+    PenTool
 } from "lucide-react";
 import type { FieldType } from "@/types/form-builder";
 
@@ -21,6 +22,7 @@ const fieldTypes = [
     { type: 'time' as FieldType, label: 'Time Picker', icon: Clock, description: 'Time selection' },
     { type: 'file' as FieldType, label: 'File Upload', icon: Upload, description: 'File attachment' },
     { type: 'parameter_link' as FieldType, label: 'Parameter Link', icon: Link2, description: 'Link to parameter specs' },
+    { type: 'signature' as FieldType, label: 'Digital Signature', icon: PenTool, description: 'Technician sign-off' },
 ];
 
 interface FieldPaletteProps {

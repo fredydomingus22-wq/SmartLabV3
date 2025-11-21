@@ -46,8 +46,8 @@ export function FormBuilderCanvas({
                             key={field.id}
                             onClick={() => onSelectField(field)}
                             className={`group relative p-4 border rounded-md cursor-pointer transition-all ${selectedField?.id === field.id
-                                    ? 'border-primary bg-accent shadow-sm'
-                                    : 'border-border hover:border-primary/50 hover:bg-accent/50'
+                                ? 'border-primary bg-accent shadow-sm'
+                                : 'border-border hover:border-primary/50 hover:bg-accent/50'
                                 }`}
                         >
                             <div className="flex items-start gap-3">
@@ -94,6 +94,14 @@ export function FormBuilderCanvas({
                                     {field.placeholder && (
                                         <div className="mt-1 text-xs text-muted-foreground italic">
                                             "{field.placeholder}"
+                                        </div>
+                                    )}
+                                    {field.field_type === 'signature' && (
+                                        <div className="mt-2 p-3 bg-muted/50 rounded border border-dashed flex items-center justify-center text-muted-foreground text-sm">
+                                            <div className="flex flex-col items-center gap-1">
+                                                <span className="font-medium">Digital Signature Area</span>
+                                                <span className="text-xs">Technician selection & PIN verification</span>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

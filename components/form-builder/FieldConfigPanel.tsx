@@ -5,8 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { FormField } from "@/types/form-builder";
-import { X, Save } from "lucide-react";
+import { X, Save, Settings } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface FieldConfigPanelProps {
     field: FormField | null;
@@ -108,6 +109,7 @@ export function FieldConfigPanel({ field, onClose, onUpdate }: FieldConfigPanelP
                             <SelectItem value="time">Time</SelectItem>
                             <SelectItem value="file">File Upload</SelectItem>
                             <SelectItem value="parameter_link">Parameter Link</SelectItem>
+                            <SelectItem value="signature">Digital Signature</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -146,12 +148,10 @@ export function FieldConfigPanel({ field, onClose, onUpdate }: FieldConfigPanelP
                                 User must fill this field
                             </p>
                         </div>
-                        <input
-                            type="checkbox"
+                        <Checkbox
                             id="is_required"
                             checked={config.is_required}
-                            onChange={(e) => setConfig({ ...config, is_required: e.target.checked })}
-                            className="h-4 w-4 cursor-pointer"
+                            onCheckedChange={(checked) => setConfig({ ...config, is_required: checked as boolean })}
                         />
                     </div>
                 </Card>
@@ -180,5 +180,4 @@ export function FieldConfigPanel({ field, onClose, onUpdate }: FieldConfigPanelP
     );
 }
 
-// Add import for Settings icon
-import { Settings } from "lucide-react";
+

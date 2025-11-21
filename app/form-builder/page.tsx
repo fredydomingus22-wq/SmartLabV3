@@ -101,11 +101,16 @@ export default function FormBuilderPage() {
                                 <CardContent>
                                     <div className="space-y-3">
                                         {/* Category Badge */}
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                             <span className={`text-xs px-2 py-1 rounded-md border font-medium capitalize ${getCategoryBadgeColor(template.category)}`}>
                                                 {template.category}
                                             </span>
-                                            <span className="text-xs text-muted-foreground">
+                                            {template.target_module && template.target_module !== 'general' && (
+                                                <span className="text-xs px-2 py-1 rounded-md border font-medium bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 capitalize">
+                                                    {template.target_module.replace('-', ' ')}
+                                                </span>
+                                            )}
+                                            <span className="text-xs text-muted-foreground ml-auto">
                                                 {template.created_at ? new Date(template.created_at).toLocaleDateString() : ''}
                                             </span>
                                         </div>

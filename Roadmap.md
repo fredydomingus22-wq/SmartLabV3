@@ -8,227 +8,97 @@
 
 # **0. Introdução ao Roadmap**
 
-Este roadmap define a estratégia de evolução do **SmartLab Enterprise** em 3 horizontes:
+Este roadmap define a estratégia de evolução do **SmartLab Enterprise** em 4 fases estratégicas, alinhadas com a implementação dos 13 módulos funcionais:
 
-* **Fase 1 (MVP Enterprise – 2025)** → Base completa e operacional
-* **Fase 2 (Escala e Inteligência – 2026)** → IA avançada, automações, multi-site
-* **Fase 3 (Ecosistema Global – 2027)** → SmartLab como plataforma internacional
-
-Cada fase contém: módulos, entregáveis, maturidade, riscos e critérios de validação.
-
----
-
-# **1. Fase 1 – MVP Enterprise (2025)**
-
-### **Objetivo:** Criar a fundação sólida para competir com KORE e InfinityQS.
-
-### **Status:** Em construção.
+* **Fase 1 (Foundation & Core – Meses 1-3)** → Base do sistema e fluxo de materiais.
+* **Fase 2 (Lab & Quality – Meses 4-6)** → Digitalização do laboratório e controle de produção.
+* **Fase 3 (Compliance & Safety – Meses 7-9)** → Segurança alimentar e gestão documental.
+* **Fase 4 (Intelligence & Scale – Meses 10-12+)** → IA, Analytics avançado e Multi-site.
 
 ---
 
-## **1.1 Núcleo do Sistema (Core Platform)**
+# **1. Fase 1 – Foundation & Core Operations (Meses 1-3)**
 
-* ✔️ Autenticação e controle de acessos (RBAC avançado)
-* ✔️ Multi-tenant básico
-* ✔️ Estrutura de parâmetros dinâmicos
-* ✔️ Especificações min/target/max
-* ✔️ Form Builder (v1 – campos básicos)
-* ✔️ Plano de amostragem configurável (Sampling Engine v1)
+### **Objetivo:** Estabelecer a espinha dorsal do sistema e iniciar o controle de materiais.
 
----
+## **1.1 Admin & Segurança (Módulos 13 & 11)**
+* ✔️ **Module 13: Admin/System Config** – Parâmetros globais, setup de tenant.
+* ✔️ **Module 11: Access Control** – RBAC, perfis de usuário, Audit Trail (v1).
 
-## **1.2 Qualidade & Controlo Laboratorial (LIMS + QA/QC)**
+## **1.2 Gestão de Materiais (Módulo 3)**
+* ✔️ **3.1 Raw Materials** – Cadastro e especificações.
+* ✔️ **3.2 Raw Material Lots** – Recebimento, inspeção e quarentena.
+* ✔️ **3.3 Supplier Management** – Cadastro e avaliação básica.
 
-* ✔️ Gestão de amostras (pipeline completo)
-* ✔️ Registo de análises (produto intermediário/final)
-* ✔️ Validação automática por limites
-* ✔️ Detecção simples de desvios (IA-lite)
-* ✔️ Dashboard operacional (análises, status, top técnicos, KPIs básicos)
+## **1.3 Produção Inicial (Módulo 1 - Parte 1)**
+* ✔️ **1.1 Production Lots** – Criação de lotes pai e rastreio básico.
 
 ---
 
-## **1.3 Segurança Alimentar (Food Safety Engine)**
+# **2. Fase 2 – Laboratory & Quality Control (Meses 4-6)**
 
-* ✔️ PRP / OPRP / PCC – registados e monitorados
-* ✔️ Alertas de desvio de PCC
-* ✔️ Ligação automática a NC
+### **Objetivo:** Digitalização completa do laboratório e controle de qualidade em processo.
 
----
+## **2.1 Laboratory Management (Módulo 2)**
+* ✔️ **2.1 Sample Management** – Pipeline de amostras.
+* ✔️ **2.2 Lab Tests** – Formulários dinâmicos e specs.
+* ✔️ **2.3 Methods & Reagents** – Gestão de métodos e inventário.
+* ✔️ **2.4 Equipment Calibration** – Controle de calibração.
 
-## **1.4 Gestão de Matérias-Primas e Fornecedores**
+## **2.2 Produção Avançada (Módulo 1 - Parte 2)**
+* ✔️ **1.2 Intermediate Lots** – Controle de xaropes/bases.
+* ✔️ **1.3 Finished Product Lots** – Liberação final e COA.
 
-* ✔️ Receção e inspeção
-* ✔️ Avaliação de fornecedor
-* ✔️ Upload de COA
-* ✔️ Quarentena / aprovação / rejeição
-
----
-
-## **1.5 NC & Auditorias**
-
-* ✔️ NC com RCA inteligente (v1)
-* ✔️ Workflow completo D0–D8
-* ✔️ Auditorias internas (v1)
+## **2.3 Rastreabilidade Total (Módulo 8)**
+* ✔️ **Traceability Module** – Visualização end-to-end (Matéria-prima → Produto Final).
 
 ---
 
-## **1.6 Equipamentos & Reagentes**
+# **3. Fase 3 – Compliance, Safety & Documents (Meses 7-9)**
 
-* ✔️ Inventário de reagentes estilo SAP
-* ✔️ Equipamentos com controlo de calibração
+### **Objetivo:** Garantir conformidade regulatória (FSSC 22000) e governança.
 
----
+## **3.1 Food Safety (Módulo 4)**
+* ✔️ **4.1 PRP Management** – Checklists e monitoramento.
+* ✔️ **4.2 OPRP & PCC** – Monitoramento de pontos críticos.
+* ✔️ **4.3 HACCP Plan Builder** – Análise de riscos e fluxogramas.
 
-## **Critérios para encerrar Fase 1**
+## **3.2 Gestão de Desvios (Módulo 5)**
+* ✔️ **5.1 NC Management** – Registro e classificação.
+* ✔️ **5.2 8D Report** – Workflow de resolução de problemas.
 
-* Plataforma estável em 1 fábrica real
-* > 95% das análises registadas digitalmente
-* Rastreabilidade completa
-* Auditoria interna realizada via SmartLab
-
----
-
-# **2. Fase 2 – Inteligência e Escala (2026)**
-
-### **Objetivo:** Tornar SmartLab a plataforma mais inteligente de QA/QC na indústria africana.
+## **3.3 Documentação e Treino (Módulos 6 & 7)**
+* ✔️ **Module 6: Document Control** – Versionamento e aprovação.
+* ✔️ **Module 7: Training & Competency** – Matriz de competência e planos de treino.
 
 ---
 
-## **2.1 IA Avançada**
+# **4. Fase 4 – Intelligence & Advanced Features (Meses 10-12+)**
 
-* 🔥 Análise preditiva (prever desvios 12–24h antes)
-* 🔥 RCA automática (machine reasoning)
-* 🔥 Auto-tuning: sugerir novos limites de especificação
-* 🔥 IA baseada em histórico de milhares de amostras
+### **Objetivo:** Transformar dados em inteligência e escalar para múltiplas fábricas.
 
----
+## **4.1 Analytics Avançado (Módulo 9)**
+* 🔥 **9.1 SPC Charts** – Xbar, R, Cpk, Ppk.
+* 🔥 **9.2 Trend Analysis** – Tendências e heatmaps.
+* 🔥 **9.3 Pareto & Histogram** – Análise de variabilidade.
 
-## **2.2 Automação Industrial (sem SCADA ainda)**
+## **4.2 Inteligência Artificial (Módulo 10)**
+* 🔥 **IA Intelligent Assistant** – Auto-validação, previsão de desvios, Why-analysis.
 
-* ✔️ Leitura automática de sensores via API interna
-* ✔️ Importação automática de relatórios
-* ✔️ Scheduler interno para rotinas
-
----
-
-## **2.3 Multi-site & Multi-company**
-
-* 🌍 Uma conta → múltiplas fábricas
-* 🌍 Consolidação global de dados
-* 🌍 Benchmarking entre fábricas
+## **4.3 Escala Global (Módulo 12)**
+* 🌍 **Multi-Tenant / Multi-Factory** – Dashboards globais e gestão multi-site.
 
 ---
 
-## **2.4 Dashboards Avançados (nível Pepsi/Heineken)**
+# **5. Critérios de Sucesso por Fase**
 
-* SPC completo (Xbar, R, I-MR)
-* Histogramas com distribuição
-* Heatmaps linha × turno × parâmetro
-* Radar charts por produto
-* Pareto automatizado com drilldown
-* Capabilidade (Cp, Cpk, Pp, Ppk)
-* Ações recomendadas pela IA
-
----
-
-## **2.5 Form Builder Avançado (v2)**
-
-* Tabelas dinâmicas
-* Campos condicionais
-* Assinatura eletrónica
-* Regras de validação configuráveis
-
----
-
-## **Critérios para encerrar Fase 2**
-
-* Pelo menos 3 fábricas usando
-* IA preditiva em produção real
-* Redução de 20–40% em desvios críticos
-* Dashboards nível global funcionando
-
----
-
-# **3. Fase 3 – Ecossistema Global (2027)**
-
-### **Objetivo:** Transformar SmartLab num **Quality Intelligence OS mundial**.
-
----
-
-## **3.1 API Pública & Marketplace**
-
-* APIs para integradores
-* Marketplace de módulos (auditorias, relatórios, checklists)
-* Partners certificados
-
----
-
-## **3.2 Integrações Profundas (avançado)**
-
-* ERP (SAP / Oracle / Dynamics)
-* MES / SCADA / PLCs
-* Sistemas laboratoriais externos
-
----
-
-## **3.3 Algoritmos proprietários**
-
-* IA preditiva exclusiva SmartLab
-* Modelos de detecção de tendências patenteáveis
-* Biblioteca global de limites e padrões QA/QC
-
----
-
-## **3.4 Certificações “Powered by SmartLab”**
-
-SmartLab pode se tornar o **framework padrão africano** de qualidade.
-
-* Certificação SmartLab Bronze / Silver / Gold
-* Auditorias digitais
-* Rastreabilidade completa
-
----
-
-## **3.5 Expansão global**
-
-* Angola → África Austral → Mercados emergentes
-
----
-
-## **Critérios para encerrar Fase 3**
-
-* SmartLab com receita SaaS anual
-* Parcerias com grandes grupos industriais
-* 10+ fábricas multi-site usando o sistema
-
----
-
-# **4. Mapa Visual (Resumo)**
-
-**2025 – Fundamento**
-MVP Enterprise · LIMS completo · Food Safety · NC & 8D · Dashboards básicos
-
-**2026 – Inteligência**
-IA preditiva · SPC avançado · Multi-site · Automação
-
-**2027 – Plataforma Global**
-APIs · Marketplace · Integrações profundas · Padrão global
-
----
-
-# **5. Riscos & Mitigações**
-
-| Risco                  | Impacto             | Mitigação                              |
-| ---------------------- | ------------------- | -------------------------------------- |
-| Complexidade elevada   | Atraso              | Modularização + releases pequenos      |
-| Falta de dados para IA | Baixo desempenho IA | Dataset unificado + simulação          |
-| Resistência da fábrica | Adoção lenta        | Treinamentos + UX premium              |
-| Mudanças de normas     | Retrabalho          | Ajuste contínuo + arquitetura flexível |
+* **Fase 1:** Sistema operacional com controle de entrada de materiais e usuários.
+* **Fase 2:** Laboratório 100% digital (zero papel) e rastreabilidade ativa.
+* **Fase 3:** Auditoria FSSC suportada pelo sistema e gestão de NCs fluida.
+* **Fase 4:** Insights preditivos gerados pela IA e operação multi-site.
 
 ---
 
 # **6. Conclusão**
 
-O Roadmap posiciona o SmartLab como o **produto mais avançado de QA/QC e Food Safety de África**, com evolução sistemática rumo a competir diretamente com sistemas globais.
-
-Pronto para auditoria, investimento ou apresentação executiva.
+Este roadmap atualizado garante que todos os **13 módulos** do SmartLab Enterprise sejam entregues de forma lógica e incremental, maximizando valor a cada trimestre.
