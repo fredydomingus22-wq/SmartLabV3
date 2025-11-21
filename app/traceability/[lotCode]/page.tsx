@@ -171,8 +171,24 @@ export default function TraceabilityDetailPage({
 
                 // Tables
                 setRawMaterials(genealogy.production_lot?.raw_materials || []);
-                setIntermediates(genealogy.intermediate_lots || []);
-                setFinishedProducts(genealogy.finished_lots || []);
+                setIntermediates(
+                    (genealogy.intermediate_lots || []).map((int: any) => ({
+                        lote: int.code || '',
+                        tanque: int.tank || 'N/A',
+                        brix: int.brix || 'N/A',
+                        status: int.status || 'DESCONHECIDO',
+                        statusColor: int.status === 'LIBERADO' ? 'bg-emerald-500' : 'bg-red-500',
+                    }))
+                );
+                setFinishedProducts(
+                    (genealogy.finished_lots || []).map((fp: any) => ({
+                        lote: fp.code || '',
+                        linha: fp.line || 'N/A',
+                        co2: fp.co2 || 'N/A',
+                        status: fp.status || 'DESCONHECIDO',
+                        statusColor: fp.status === 'LIBERADO' ? 'bg-emerald-500' : 'bg-red-500',
+                    }))
+                );
 
                 // Mock lab tests / NC / PCC (replace later with real API)
                 setLabTests([
