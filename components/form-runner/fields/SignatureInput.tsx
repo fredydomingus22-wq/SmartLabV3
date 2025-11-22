@@ -9,33 +9,56 @@ import { getTechnicians, verifyTechnicianPin } from "@/lib/queries/technicians";
 import type { Technician } from "@/types/technician";
 import { ShieldCheck, Lock, UserCheck } from "lucide-react";
 
+export interface SignatureValue {
+    name: string;
+    date: string;
+    techId: string;
+}
+
 interface SignatureInputProps {
     fieldKey: string;
     label: string;
     required?: boolean;
-    value?: any;
-    onChange: (value: any) => void;
+    value?: SignatureValue | null;
+    onChange: (value: SignatureValue | null) => void;
     disabled?: boolean;
 }
 
 export function SignatureInput({ fieldKey, label, required, value, onChange, disabled }: SignatureInputProps) {
     const [technicians, setTechnicians] = useState<Technician[]>([]);
-    const [selectedTechId, setSelectedTechId] = useState<string>("");
+    const [selectedTechId, setSelectedTechId] = useState<string | undefined>(undefined);
     const [pin, setPin] = useState("");
     const [verifying, setVerifying] = useState(false);
-    const [signedData, setSignedData] = useState<{ name: string; date: string; techId: string } | null>(value || null);
+    const [signedData, setSignedData] = useState<SignatureValue | null>(value || null);
     const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        loadTechnicians();
+        let mounted = true;
+        const load = async () => {
+            try {
+                const { data } = await getTechnicians();
+                if (mounted && data) {
+                    setTechnicians(data.filter(t => t.active));
+                }
+            } catch (e) {
+                console.error("Failed to load technicians", e);
+            } finally {
+                if (mounted) setIsLoading(false);
+            }
+        };
+        load();
+        return () => { mounted = false; };
     }, []);
 
-    const loadTechnicians = async () => {
-        const { data } = await getTechnicians();
-        if (data) {
-            setTechnicians(data.filter(t => t.active));
+    // Sync with external value if it changes (e.g. form reset)
+    useEffect(() => {
+        if (value) {
+            setSignedData(value);
+        } else {
+            setSignedData(null);
         }
-    };
+    }, [value]);
 
     const handleSign = async () => {
         if (!selectedTechId || !pin) {
@@ -59,6 +82,7 @@ export function SignatureInput({ fieldKey, label, required, value, onChange, dis
                 setSignedData(signature);
                 onChange(signature);
                 setPin(""); // Clear PIN
+                setSelectedTechId(undefined); // Reset selection
             } else {
                 setError("Invalid PIN");
             }
@@ -73,7 +97,7 @@ export function SignatureInput({ fieldKey, label, required, value, onChange, dis
     const handleClear = () => {
         setSignedData(null);
         onChange(null);
-        setSelectedTechId("");
+        setSelectedTechId(undefined);
         setPin("");
         setError("");
     };
@@ -113,18 +137,24 @@ export function SignatureInput({ fieldKey, label, required, value, onChange, dis
             <div className="p-4 border rounded-lg bg-card space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor={`${fieldKey}_tech`} className="text-xs text-muted-foreground">Technician</Label>
-                    <Select value={selectedTechId} onValueChange={setSelectedTechId} disabled={disabled}>
-                        <SelectTrigger id={`${fieldKey}_tech`}>
-                            <SelectValue placeholder="Select Technician" />
-                        </SelectTrigger>
-                        <SelectContent>
+                    {isLoading ? (
+                        <div className="h-10 w-full bg-muted animate-pulse rounded-md" />
+                    ) : (
+                        <select
+                            id={`${fieldKey}_tech`}
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={selectedTechId || ""}
+                            onChange={(e) => setSelectedTechId(e.target.value || undefined)}
+                            disabled={disabled}
+                        >
+                            <option value="" disabled>Select Technician</option>
                             {technicians.map((tech) => (
-                                <SelectItem key={tech.id} value={tech.id}>
+                                <option key={tech.id} value={tech.id}>
                                     {tech.name} ({tech.role})
-                                </SelectItem>
+                                </option>
                             ))}
-                        </SelectContent>
-                    </Select>
+                        </select>
+                    )}
                 </div>
 
                 {selectedTechId && (

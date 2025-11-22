@@ -33,7 +33,7 @@ export interface IntermediateLot {
     brix?: number;
     ph?: number;
     acidity?: number;
-    ingredients?: any;
+    ingredients?: Record<string, any>;
     prepared_at?: string;
     status?: string;
     // Joined fields

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getFinishedLots, createFinishedLot, getIntermediateLots, updateFinishedLotStatus } from "@/lib/queries/production";
 import { FinishedLot, IntermediateLot } from "@/types/production";
-import { Plus, Package, ArrowRight, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Package, ArrowRight, Clock, CheckCircle, XCircle, FileText, Truck } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 
@@ -57,12 +57,43 @@ export default function FinishedLotsPage() {
     };
 
     const handleStatusChange = async (id: string, newStatus: FinishedLot["status"]) => {
+        if (!confirm(`Are you sure you want to change status to ${newStatus.toUpperCase()}?`)) return;
+
         try {
             await updateFinishedLotStatus(id, newStatus);
             loadData();
         } catch (error) {
             console.error("Error updating status:", error);
         }
+    };
+
+    const handleGenerateCOA = (lot: FinishedLot) => {
+        // Mock COA Generation - In a real app, this would generate a PDF
+        const coaContent = `
+CERTIFICATE OF ANALYSIS
+-----------------------
+Lot Code: ${lot.code}
+Product: ${lot.intermediate_lot?.production_lot?.product?.name || 'N/A'}
+Date: ${new Date().toLocaleDateString()}
+Status: ${lot.status.toUpperCase()}
+
+Analysis Results:
+- pH: ${lot.ph || 'N/A'}
+- Brix: ${lot.brix || 'N/A'}
+- Density: ${lot.density || 'N/A'}
+
+Approved By: QA Manager
+        `;
+
+        const blob = new Blob([coaContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `COA-${lot.code}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     };
 
     return (
@@ -187,9 +218,22 @@ export default function FinishedLotsPage() {
                                             <Button
                                                 size="sm"
                                                 variant="default"
+                                                className="bg-green-600 hover:bg-green-700"
                                                 onClick={() => handleStatusChange(lot.id, "released")}
                                             >
+                                                <Truck className="mr-1 h-3 w-3" />
                                                 Release
+                                            </Button>
+                                        )}
+
+                                        {lot.status === "released" && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleGenerateCOA(lot)}
+                                            >
+                                                <FileText className="mr-1 h-3 w-3" />
+                                                COA
                                             </Button>
                                         )}
                                     </div>

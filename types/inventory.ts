@@ -18,6 +18,9 @@ export interface RawMaterialLot {
 export interface Supplier {
     id: string;
     name: string;
-    status: 'active' | 'inactive' | 'blocked';
+    type: string;
+    auditor_id?: string;
+    status: 'planned' | 'active' | 'inactive' | 'blocked';
+    scheduled_date?: string;
     created_at: string;
 }

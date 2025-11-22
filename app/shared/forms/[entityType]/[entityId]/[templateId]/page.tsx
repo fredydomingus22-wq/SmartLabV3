@@ -10,6 +10,7 @@ import type { FormTemplateWithFields } from "@/types/form-builder";
 import { Loader } from "@/components/ui/Loader";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ExecuteEntityFormPage() {
     const params = useParams();
@@ -21,10 +22,20 @@ export default function ExecuteEntityFormPage() {
     const [template, setTemplate] = useState<FormTemplateWithFields | null>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [userId, setUserId] = useState<string | null>(null);
 
     useEffect(() => {
         loadTemplate();
+        loadUser();
     }, [templateId]);
+
+    const loadUser = async () => {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            setUserId(user.id);
+        }
+    };
 
     const loadTemplate = async () => {
         setLoading(true);
@@ -42,25 +53,33 @@ export default function ExecuteEntityFormPage() {
 
     const handleSubmit = async (formData: Record<string, any>) => {
         if (!template) return;
+        if (!userId) {
+            alert("You must be logged in to submit a form.");
+            return;
+        }
 
         setSubmitting(true);
         try {
+            console.log("Submitting form data:", formData);
             const { error } = await createFormSubmission({
                 template_id: template.id,
                 data: formData,
                 status: 'submitted',
-                submitted_by: 'user-id-placeholder', // TODO: Get actual user ID
+                submitted_by: userId,
                 entity_type: entityType,
                 entity_id: entityId
             });
 
-            if (error) throw error;
+            if (error) {
+                console.error("Supabase submission error:", error);
+                throw error;
+            }
 
             alert('Form submitted successfully!');
             router.push(`/shared/forms/${entityType}/${entityId}`);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error submitting form:', error);
-            alert('Failed to submit form');
+            alert(`Failed to submit form: ${error.message || error.details || "Unknown error"}`);
         } finally {
             setSubmitting(false);
         }

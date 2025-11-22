@@ -30,7 +30,7 @@ interface DynamicFormProps {
 
 export function DynamicForm({
     template,
-    initialData = {},
+    initialData,
     onSubmit,
     isSubmitting = false,
     readOnly = false
@@ -43,7 +43,7 @@ export function DynamicForm({
         formState: { errors },
         reset
     } = useForm({
-        defaultValues: initialData
+        defaultValues: initialData || {}
     });
 
     const formValues = watch();
@@ -88,22 +88,26 @@ export function DynamicForm({
                 return <TimeFieldRenderer key={field.id} {...commonProps} />;
             case 'signature':
                 return (
-                    <Controller
-                        key={field.id}
-                        control={control}
-                        name={field.field_key}
-                        rules={{ required: field.is_required }}
-                        render={({ field: { onChange, value } }) => (
-                            <SignatureInput
-                                fieldKey={field.field_key}
-                                label={field.label}
-                                required={field.is_required}
-                                value={value}
-                                onChange={onChange}
-                                disabled={readOnly}
-                            />
+                    <div key={field.id} className="space-y-2">
+                        <Controller
+                            control={control}
+                            name={field.field_key}
+                            rules={{ required: field.is_required }}
+                            render={({ field: { onChange, value } }) => (
+                                <SignatureInput
+                                    fieldKey={field.field_key}
+                                    label={field.label}
+                                    required={field.is_required}
+                                    value={value}
+                                    onChange={onChange}
+                                    disabled={readOnly}
+                                />
+                            )}
+                        />
+                        {errors[field.field_key] && (
+                            <p className="text-sm text-destructive">This field is required</p>
                         )}
-                    />
+                    </div>
                 );
             case 'file':
                 return (
@@ -161,13 +165,21 @@ export function DynamicForm({
     };
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form
+            onSubmit={handleSubmit(onSubmit, (errors) => console.error("Form validation errors:", errors))}
+            className="space-y-6"
+        >
             <div className="space-y-4">
                 {sortedFields.map(field => renderField(field))}
             </div>
 
             {!readOnly && (
-                <div className="flex justify-end">
+                <div className="flex flex-col items-end gap-2">
+                    {Object.keys(errors).length > 0 && (
+                        <p className="text-sm text-destructive font-medium">
+                            Please fix the errors above before submitting.
+                        </p>
+                    )}
                     <Button type="submit" disabled={isSubmitting}>
                         {isSubmitting && <Loader className="mr-2 h-4 w-4" />}
                         Submit Form

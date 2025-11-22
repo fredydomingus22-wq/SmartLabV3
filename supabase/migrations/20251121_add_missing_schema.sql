@@ -57,6 +57,14 @@ alter table public.equipment add column if not exists last_calibrated timestamp 
 alter table public.reagents add column if not exists unit text, add column if not exists last_used timestamp with time zone;
 
 -- NC (Non-Conformities) enhancements
+create table if not exists public.nc (
+  id uuid default uuid_generate_v4() primary key,
+  code text unique,
+  description text,
+  status text default 'open',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 alter table public.nc
   add column if not exists sample_id uuid references public.samples(id),
   add column if not exists parameter_id uuid references public.parameters(id),

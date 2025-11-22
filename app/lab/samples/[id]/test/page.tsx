@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DynamicForm } from '@/components/form-builder/DynamicForm';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
+import { updateSampleStatus } from '@/lib/queries/lab';
 
 export default function ExecuteTestPage({ params }: { params: { id: string } }) {
     const [sample, setSample] = useState<any>(null);
@@ -95,25 +96,23 @@ export default function ExecuteTestPage({ params }: { params: { id: string } }) 
 
             if (submissionError) throw submissionError;
 
-            // 2. Create Lab Test Record
+            // 2. Create Lab Test Record (Optional linkage)
             const { error: testError } = await supabase
                 .from('lab_tests')
                 .insert({
                     sample_id: sample.id,
                     status: 'completed',
-                    // We could link the submission ID here if we added a column for it in lab_tests, 
-                    // or just rely on the entity_id in form_submissions.
                 });
 
-            if (testError) throw testError;
+            if (testError) {
+                console.warn("Could not create lab_test record, but form submitted.", testError);
+            }
 
             // 3. Update Sample Status
-            await supabase
-                .from('samples')
-                .update({ status: 'in_analysis' }) // or 'review'
-                .eq('id', sample.id);
+            // Logic: If successful, move to 'reviewed' (pending approval)
+            await updateSampleStatus(sample.id, 'reviewed');
 
-            toast.success('Test submitted successfully');
+            toast.success('Test results submitted successfully');
             router.push('/lab/samples');
         } catch (error) {
             toast.error('Error submitting test');
@@ -132,6 +131,9 @@ export default function ExecuteTestPage({ params }: { params: { id: string } }) 
                     <h1 className="text-3xl font-bold text-slate-900">Execute Test</h1>
                     <p className="text-slate-500">Sample: {sample.code} ({sample.type})</p>
                 </div>
+                <Button variant="outline" onClick={() => router.back()}>
+                    Cancel
+                </Button>
             </div>
 
             <Card>

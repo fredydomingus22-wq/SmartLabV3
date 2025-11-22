@@ -9,13 +9,19 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getSuppliers, createSupplier } from "@/lib/queries/inventory";
 import { Supplier } from "@/types/inventory";
-import { Plus, Building2 } from "lucide-react";
+import { Plus, Building2, Calendar, User } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export default function SuppliersPage() {
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({ name: "", status: "active" as Supplier["status"] });
+    const [formData, setFormData] = useState({
+        name: "",
+        status: "active" as Supplier["status"],
+        type: "manufacturer" as Supplier["type"],
+        auditor_id: "",
+        scheduled_date: ""
+    });
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -35,8 +41,18 @@ export default function SuppliersPage() {
         e.preventDefault();
         setLoading(true);
         try {
-            await createSupplier(formData);
-            setFormData({ name: "", status: "active" });
+            await createSupplier({
+                ...formData,
+                auditor_id: formData.auditor_id || undefined,
+                scheduled_date: formData.scheduled_date || undefined
+            });
+            setFormData({
+                name: "",
+                status: "active",
+                type: "manufacturer",
+                auditor_id: "",
+                scheduled_date: ""
+            });
             setShowForm(false);
             loadSuppliers();
         } catch (error) {
@@ -64,32 +80,59 @@ export default function SuppliersPage() {
                     <div className="bg-card p-6 rounded-lg border">
                         <h3 className="text-lg font-semibold mb-4">New Supplier</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <Label htmlFor="name">Supplier Name *</Label>
-                                <Input
-                                    id="name"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    required
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="name">Supplier Name *</Label>
+                                    <Input
+                                        id="name"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="type">Type *</Label>
+                                    <Select
+                                        value={formData.type}
+                                        onValueChange={(value) => setFormData({ ...formData, type: value as Supplier["type"] })}
+                                    >
+                                        <SelectTrigger id="type">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="manufacturer">Manufacturer</SelectItem>
+                                            <SelectItem value="distributor">Distributor</SelectItem>
+                                            <SelectItem value="service_provider">Service Provider</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label htmlFor="status">Status</Label>
+                                    <Select
+                                        value={formData.status}
+                                        onValueChange={(value) => setFormData({ ...formData, status: value as Supplier["status"] })}
+                                    >
+                                        <SelectTrigger id="status">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="active">Active</SelectItem>
+                                            <SelectItem value="inactive">Inactive</SelectItem>
+                                            <SelectItem value="blocked">Blocked</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label htmlFor="scheduled_date">Next Audit Date</Label>
+                                    <Input
+                                        id="scheduled_date"
+                                        type="date"
+                                        value={formData.scheduled_date}
+                                        onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <Label htmlFor="status">Status</Label>
-                                <Select
-                                    value={formData.status}
-                                    onValueChange={(value) => setFormData({ ...formData, status: value as Supplier["status"] })}
-                                >
-                                    <SelectTrigger id="status">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="active">Active</SelectItem>
-                                        <SelectItem value="inactive">Inactive</SelectItem>
-                                        <SelectItem value="blocked">Blocked</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 pt-2">
                                 <Button type="submit" disabled={loading}>
                                     {loading ? "Creating..." : "Create Supplier"}
                                 </Button>
@@ -110,9 +153,20 @@ export default function SuppliersPage() {
                                 </div>
                                 <div className="flex-1">
                                     <div className="flex justify-between items-start">
-                                        <h3 className="font-semibold">{supplier.name}</h3>
+                                        <div>
+                                            <h3 className="font-semibold">{supplier.name}</h3>
+                                            <p className="text-xs text-muted-foreground capitalize">{supplier.type.replace('_', ' ')}</p>
+                                        </div>
                                         <StatusBadge status={supplier.status} />
                                     </div>
+
+                                    {supplier.scheduled_date && (
+                                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
+                                            <Calendar className="h-3 w-3" />
+                                            <span>Audit: {new Date(supplier.scheduled_date).toLocaleDateString()}</span>
+                                        </div>
+                                    )}
+
                                     <p className="text-xs text-muted-foreground mt-1">
                                         Added {new Date(supplier.created_at).toLocaleDateString()}
                                     </p>

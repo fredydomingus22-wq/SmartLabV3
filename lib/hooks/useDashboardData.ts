@@ -1,4 +1,5 @@
 // lib/hooks/useDashboardData.ts
+"use client";
 
 import { useEffect, useState } from "react";
 import {

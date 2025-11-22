@@ -1,4 +1,17 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+function Skeleton({
+    className,
+    ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+    return (
+        <div
+            className={cn("animate-pulse rounded-md bg-slate-800", className)}
+            {...props}
+        />
+    )
+}
 
 interface ChartSkeletonProps {
     height?: string;
@@ -44,3 +57,5 @@ export function KPISkeleton() {
         </Card>
     );
 }
+
+export { Skeleton };
