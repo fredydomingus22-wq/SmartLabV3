@@ -21,7 +21,8 @@ import {
     GitBranch,
     TestTube,
     Boxes,
-    Sparkles
+    Sparkles,
+    Wrench
 } from "lucide-react"
 import { SidebarGroup } from "./SidebarGroup"
 
@@ -65,6 +66,8 @@ const sidebarGroups = [
         items: [
             { name: "Sample Management", href: "/lab/samples", icon: TestTube },
             { name: "Lab Tests", href: "/lab-tests", icon: FlaskConical },
+            { name: "Equipment", href: "/equipment", icon: Wrench },
+            { name: "Reagents", href: "/reagents", icon: FlaskConical },
         ],
     },
     {
@@ -82,7 +85,7 @@ const sidebarGroups = [
         name: "Quality & Safety",
         icon: ShieldCheck,
         items: [
-            { name: "Food Safety", href: "/food-safety/pcc", icon: ShieldCheck },
+            { name: "Food Safety", href: "/food-safety", icon: ShieldCheck },
             { name: "Non-Conformities", href: "/nc", icon: AlertTriangle },
             { name: "Audits", href: "/audits", icon: ClipboardCheck },
         ],
