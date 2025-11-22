@@ -154,7 +154,12 @@ export default function SuppliersPage() {
                                 <div className="flex-1">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <h3 className="font-semibold">{supplier.name}</h3>
+                                            <h3
+                                                className="font-semibold hover:underline cursor-pointer"
+                                                onClick={() => window.location.href = `/suppliers/${supplier.id}`}
+                                            >
+                                                {supplier.name}
+                                            </h3>
                                             <p className="text-xs text-muted-foreground capitalize">{supplier.type.replace('_', ' ')}</p>
                                         </div>
                                         <StatusBadge status={supplier.status} />

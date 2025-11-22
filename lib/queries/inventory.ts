@@ -47,6 +47,18 @@ export async function createSupplier(supplier: Omit<Supplier, "id" | "created_at
     return data as Supplier;
 }
 
+export async function getSupplierById(id: string) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("suppliers")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+    if (error) throw error;
+    return data as Supplier;
+}
+
 export async function getRawMaterialLots() {
     const supabase = createClient();
     const { data, error } = await supabase

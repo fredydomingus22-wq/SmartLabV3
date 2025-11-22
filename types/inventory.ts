@@ -36,6 +36,8 @@ export interface Supplier {
     type: string;
     auditor_id?: string;
     status: 'planned' | 'active' | 'inactive' | 'blocked';
+    qualification_status?: 'pending' | 'qualified' | 'disqualified';
+    rating?: number;
     scheduled_date?: string;
     created_at: string;
 }
