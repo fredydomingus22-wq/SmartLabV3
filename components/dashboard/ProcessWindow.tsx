@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ChartSkeleton } from "@/components/ui/Skeleton";
+import { ChartSkeleton } from "@/components/ui/skeleton";
 import { useProcessData } from "@/lib/hooks/useDashboardData";
 
 type Parameter = 'brix' | 'co2' | 'ph' | 'densidade';

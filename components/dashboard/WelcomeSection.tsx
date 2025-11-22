@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDashboardMetrics } from "@/lib/hooks/useDashboardData";
 import { KPICard } from "./KPICard";
-import { KPISkeleton } from "@/components/ui/Skeleton";
+import { KPISkeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 
 export function WelcomeSection() {

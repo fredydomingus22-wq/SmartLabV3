@@ -9,3 +9,4 @@ export * from './technician';
 export * from './training';
 export * from './equipment';
 export * from './reagent';
+export * from './audit';

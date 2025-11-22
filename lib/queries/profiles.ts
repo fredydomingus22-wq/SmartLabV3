@@ -36,3 +36,16 @@ export async function getProfileById(id: string) {
     if (error) throw error;
     return data as Profile;
 }
+
+export async function updateProfile(id: string, updates: Partial<Profile>) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as Profile;
+}

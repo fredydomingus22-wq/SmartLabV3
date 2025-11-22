@@ -10,7 +10,7 @@ import {
     Tooltip,
 } from "recharts";
 import { useProductDistribution } from "@/lib/hooks/useDashboardData";
-import { ChartSkeleton } from "@/components/ui/Skeleton";
+import { ChartSkeleton } from "@/components/ui/skeleton";
 
 export function ProductDistribution() {
     const { data: chartData, isLoading, error } = useProductDistribution();
