@@ -1,8 +1,8 @@
-import { Sidebar } from "./Sidebar"
-import { Header } from "./Header"
+import { Sidebar } from "./Sidebar";
+import { Header } from "./Header";
 
 interface AppShellProps {
-    children: React.ReactNode
+    children: React.ReactNode;
 }
 
 export function AppShell({ children }: AppShellProps) {
@@ -11,10 +11,8 @@ export function AppShell({ children }: AppShellProps) {
             <Sidebar />
             <div className="ml-64 flex flex-col min-h-screen">
                 <Header />
-                <main className="flex-1 bg-slate-950">
-                    {children}
-                </main>
+                <main className="flex-1 bg-slate-950">{children}</main>
             </div>
         </div>
-    )
+    );
 }

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Bell, Settings, User } from "lucide-react";
 
@@ -8,22 +11,36 @@ interface ProfileInfo {
     role?: string | null;
 }
 
-export async function Header() {
-    const supabase = createClient();
+export function Header() {
+    const supabase = useMemo(() => createClient(), []);
+    const [profile, setProfile] = useState<ProfileInfo | null>(null);
 
-    const {
-        data: { session },
-    } = await supabase.auth.getSession();
+    useEffect(() => {
+        let isMounted = true;
+        const loadProfile = async () => {
+            const {
+                data: { session },
+            } = await supabase.auth.getSession();
 
-    let profile: ProfileInfo | null = null;
-    if (session?.user?.id) {
-        const { data } = await supabase
-            .from("profiles")
-            .select("full_name, role")
-            .eq("id", session.user.id)
-            .single();
-        profile = data;
-    }
+            const userId = session?.user?.id;
+            if (!userId) return;
+
+            const { data } = await supabase
+                .from("profiles")
+                .select("full_name, role")
+                .eq("id", userId)
+                .single();
+
+            if (isMounted) {
+                setProfile(data ?? null);
+            }
+        };
+
+        loadProfile();
+        return () => {
+            isMounted = false;
+        };
+    }, [supabase]);
 
     const greetingTarget = profile?.full_name?.trim() || profile?.role || "Utilizador";
 
