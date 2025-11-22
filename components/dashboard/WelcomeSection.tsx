@@ -24,28 +24,58 @@ export function WelcomeSection() {
 
     const fetchUserData = async () => {
         try {
-            const { data: { user: authUser } } = await supabase.auth.getUser();
-            if (authUser) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('full_name, role')
-                    .eq('id', authUser.id)
-                    .single();
-                if (profile) {
-                    setUser(profile);
-                }
+            console.log('🔍 Starting user fetch...');
+            const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+            console.log('✅ Auth User:', authUser);
+            console.log('❌ Auth Error:', authError);
+
+            if (!authUser) {
+                console.log('⚠️ No authenticated user found');
+                return;
+            }
+
+            console.log('🔍 Fetching profile for user ID:', authUser.id);
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('full_name, role')
+                .eq('id', authUser.id)
+                .single();
+
+            console.log('✅ Profile Data:', profile);
+            console.log('❌ Profile Error:', profileError);
+
+            if (profileError) {
+                console.log('🔴 FULL ERROR DETAILS:');
+                console.log('  - Code:', profileError.code);
+                console.log('  - Message:', profileError.message);
+                console.log('  - Details:', profileError.details);
+                console.log('  - Hint:', profileError.hint);
+            }
+
+            if (profile) {
+                console.log('🎉 Setting user state with:', profile);
+                setUser(profile);
+            } else {
+                console.log('⚠️ No profile found, using fallback');
+                // Fallback: use email as name
+                setUser({
+                    full_name: authUser.email || 'Usuário',
+                    role: 'technician'
+                });
             }
         } catch (error) {
-            console.error('Error fetching user:', error);
+            console.error('💥 Error fetching user:', error);
         }
     };
 
     const fetchProducts = async () => {
         try {
+            console.log('🔍 Fetching products...');
             const productsData = await getProducts();
+            console.log('✅ Products Data:', productsData);
             setProducts(productsData);
         } catch (error) {
-            console.error('Error fetching products:', error);
+            console.error('💥 Error fetching products:', error);
         }
     };
 
@@ -59,6 +89,8 @@ export function WelcomeSection() {
         };
         return roleMap[role] || role;
     };
+
+    console.log('🎨 Rendering with user state:', user);
 
     return (
         <div className="space-y-6">

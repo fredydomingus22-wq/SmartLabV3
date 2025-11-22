@@ -24,6 +24,18 @@ export function calculateMovingRanges(values: number[]): number[] {
     return ranges;
 }
 
+const subgroupConstants: Record<number, { A2: number; d2: number }> = {
+    2: { A2: 1.880, d2: 1.128 },
+    3: { A2: 1.023, d2: 1.693 },
+    4: { A2: 0.729, d2: 2.059 },
+    5: { A2: 0.577, d2: 2.326 },
+    6: { A2: 0.483, d2: 2.534 },
+    7: { A2: 0.419, d2: 2.704 },
+    8: { A2: 0.373, d2: 2.847 },
+    9: { A2: 0.337, d2: 2.970 },
+    10: { A2: 0.308, d2: 3.078 }
+};
+
 // Calculate Control Limits for I-MR Chart
 export function calculateIMRLimits(data: SPCDataPoint[], usl?: number, lsl?: number): ControlLimits {
     const values = data.map(d => d.value);
@@ -49,6 +61,40 @@ export function calculateIMRLimits(data: SPCDataPoint[], usl?: number, lsl?: num
     };
 }
 
+// Calculate Control Limits for Xbar-R (uses subgroup size)
+export function calculateXbarRLimits(data: SPCDataPoint[], subgroupSize: number = 4, usl?: number, lsl?: number): ControlLimits {
+    const constants = subgroupConstants[subgroupSize] ?? subgroupConstants[4];
+    const values = data.map((d) => d.value);
+
+    const subgroups: number[][] = [];
+    for (let i = 0; i < values.length; i += subgroupSize) {
+        subgroups.push(values.slice(i, i + subgroupSize));
+    }
+
+    const subgroupMeans = subgroups
+        .filter((sg) => sg.length > 0)
+        .map((sg) => calculateMean(sg));
+    const ranges = subgroups
+        .filter((sg) => sg.length > 0)
+        .map((sg) => Math.max(...sg) - Math.min(...sg));
+
+    const xbarBar = calculateMean(subgroupMeans);
+    const rBar = calculateMean(ranges);
+
+    const ucl = xbarBar + constants.A2 * rBar;
+    const lcl = xbarBar - constants.A2 * rBar;
+    const sigma = rBar / constants.d2;
+
+    return {
+        ucl,
+        lcl,
+        cl: xbarBar,
+        usl,
+        lsl,
+        sigma
+    };
+}
+
 // Calculate Capability Indices (Cp, Cpk, Pp, Ppk)
 export function calculateCapability(
     data: SPCDataPoint[],
@@ -65,6 +111,10 @@ export function calculateCapability(
     // Sigma Short (Within-subgroup) -> for Cp, Cpk
     // For I-MR, sigma short is estimated from MRbar / d2
     const sigmaShort = limits.sigma;
+
+    if (sigmaLong === 0 || sigmaShort === 0) {
+        return null;
+    }
 
     const pp = (limits.usl - limits.lsl) / (6 * sigmaLong);
     const ppu = (limits.usl - mean) / (3 * sigmaLong);

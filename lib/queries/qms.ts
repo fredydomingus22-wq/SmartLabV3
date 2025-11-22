@@ -4,7 +4,7 @@ import { NonConformity, EightDReport } from "@/types/qms";
 export async function getNCs() {
     const supabase = createClient();
     const { data, error } = await supabase
-        .from("non_conformities")
+        .from("nc")
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -15,7 +15,7 @@ export async function getNCs() {
 export async function createNC(nc: Omit<NonConformity, "id" | "created_at">) {
     const supabase = createClient();
     const { data, error } = await supabase
-        .from("non_conformities")
+        .from("nc")
         .insert(nc)
         .select()
         .single();
@@ -27,7 +27,7 @@ export async function createNC(nc: Omit<NonConformity, "id" | "created_at">) {
 export async function updateNC(id: string, updates: Partial<NonConformity>) {
     const supabase = createClient();
     const { data, error } = await supabase
-        .from("non_conformities")
+        .from("nc")
         .update(updates)
         .eq("id", id)
         .select()
@@ -41,7 +41,7 @@ export async function getEightDReports() {
     const supabase = createClient();
     const { data, error } = await supabase
         .from("eight_d_reports")
-        .select("*, nc:non_conformities(code)")
+        .select("*, nc:nc(code)")
         .order("created_at", { ascending: false });
 
     if (error) throw error;
