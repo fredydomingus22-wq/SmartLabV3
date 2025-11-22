@@ -19,6 +19,13 @@ function LoginForm() {
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [error, setError] = useState(''); // New state for general errors
+
+    // TEMPORARY BYPASS - Remove when Supabase is back
+    const handleTemporaryBypass = () => {
+        console.log("⚠️ TEMPORARY BYPASS ACTIVE - Remove in production!");
+        router.push('/dashboard');
+    };
 
     const isEmailValid = useMemo(() => /\S+@\S+\.\S+/.test(email), [email]);
     const isPasswordValid = password.trim().length >= 6;
@@ -142,13 +149,23 @@ function LoginForm() {
 
                                 <Button type="submit" className="w-full" disabled={loading || !isFormValid}>
                                     {loading ? (
-                                        <span className="inline-flex items-center gap-2">
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            Entrando...
-                                        </span>
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            A entrar...
+                                        </>
                                     ) : (
                                         "Entrar"
                                     )}
+                                </Button>
+
+                                {/* TEMPORARY - Remove when Supabase is back */}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full border-yellow-600 text-yellow-600 hover:bg-yellow-600/10"
+                                    onClick={handleTemporaryBypass}
+                                >
+                                    ⚠️ Bypass Login (Supabase Maintenance)
                                 </Button>
                             </form>
                         </CardContent>
