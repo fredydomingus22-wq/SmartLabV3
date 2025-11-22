@@ -1,32 +1,89 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDashboardMetrics } from "@/lib/hooks/useDashboardData";
 import { KPICard } from "./KPICard";
 import { KPISkeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
+import { createClient } from '@/lib/supabase/client';
+import { getProducts } from '@/lib/queries/production';
 
 export function WelcomeSection() {
     const { data, isLoading } = useDashboardMetrics();
+    const [user, setUser] = useState<{ full_name: string; role: string } | null>(null);
+    const [products, setProducts] = useState<any[]>([]);
+    const [selectedProduct, setSelectedProduct] = useState('all');
+    const supabase = createClient();
+
+    useEffect(() => {
+        fetchUserData();
+        fetchProducts();
+    }, []);
+
+    const fetchUserData = async () => {
+        try {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (authUser) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('full_name, role')
+                    .eq('id', authUser.id)
+                    .single();
+                if (profile) {
+                    setUser(profile);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching user:', error);
+        }
+    };
+
+    const fetchProducts = async () => {
+        try {
+            const productsData = await getProducts();
+            setProducts(productsData);
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        }
+    };
+
+    const getRoleDisplay = (role: string) => {
+        const roleMap: Record<string, string> = {
+            'admin': 'Administrador',
+            'manager': 'Gestor',
+            'supervisor': 'Supervisor',
+            'technician': 'Técnico',
+            'auditor': 'Auditor'
+        };
+        return roleMap[role] || role;
+    };
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-end">
                 <div>
                     <p className="text-sm text-muted-foreground">Bem-vindo de volta,</p>
-                    <h1 className="text-3xl font-bold text-white">Analista!</h1>
-                    <p className="text-muted-foreground">Aqui está o seu Resumo da Qualidade SmartLab</p>
+                    <h1 className="text-3xl font-bold text-white">
+                        {user ? getRoleDisplay(user.role) : 'Utilizador'}!
+                    </h1>
+                    <p className="text-muted-foreground">
+                        {user ? `Olá, ${user.full_name}` : 'Aqui está o seu Resumo da Qualidade SmartLab'}
+                    </p>
                 </div>
                 <div className="w-[200px]">
-                    <Select defaultValue="all">
+                    <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                         <SelectTrigger className="w-full bg-slate-950 border-slate-800 text-white h-9">
                             <SelectValue placeholder="Selecione SKU" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todos os SKUs</SelectItem>
-                            <SelectItem value="sku1">SKU 1</SelectItem>
-                            <SelectItem value="sku2">SKU 2</SelectItem>
+                            {products.map((product) => (
+                                <SelectItem key={product.id} value={product.id}>
+                                    {product.name} ({product.code})
+                                </SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                 </div>
