@@ -72,3 +72,16 @@ export async function createRawMaterialLot(lot: Omit<RawMaterialLot, "id" | "cre
     if (error) throw error;
     return data as RawMaterialLot;
 }
+
+export async function updateRawMaterialLotQuantity(lotId: string, newQuantity: number) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("raw_material_lots")
+        .update({ quantity: newQuantity })
+        .eq("id", lotId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as RawMaterialLot;
+}
