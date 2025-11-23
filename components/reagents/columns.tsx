@@ -90,7 +90,7 @@ export const columns: ColumnDef<ReagentWithStock>[] = [
                 </HoverCard >
             );
         },
-{
+    {
         accessorKey: "category",
         header: "Category",
         cell: ({ row }) => <Badge variant="outline" className="capitalize">{row.getValue("category")}</Badge>,
