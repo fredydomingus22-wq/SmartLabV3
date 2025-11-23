@@ -2,6 +2,7 @@ export interface Reagent {
     id: string;
     code: string;
     name: string;
+    description?: string;
     cas_number?: string;
     formula?: string;
     category: 'acid' | 'base' | 'indicator' | 'solvent' | 'buffer' | 'standard' | 'other';
