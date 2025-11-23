@@ -6,7 +6,8 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getLineSamples, LineSample } from "@/lib/queries/production";
+import { getLineSamples } from "@/lib/queries/production";
+import { LineSample } from "@/types/production";
 import { Plus, TestTube, Clock, Factory, AlertCircle, CheckCircle, Search } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
@@ -115,8 +116,8 @@ export default function LineAnalysisPage() {
                                 <div key={sample.id} className="bg-card p-4 rounded-lg border hover:border-primary transition-colors flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
                                     <div className="flex items-start gap-4">
                                         <div className={`p-3 rounded-full ${sample.status === 'oos' ? 'bg-red-500/10 text-red-500' :
-                                                sample.status === 'approved' ? 'bg-green-500/10 text-green-500' :
-                                                    'bg-blue-500/10 text-blue-500'
+                                            sample.status === 'approved' ? 'bg-green-500/10 text-green-500' :
+                                                'bg-blue-500/10 text-blue-500'
                                             }`}>
                                             <TestTube className="h-6 w-6" />
                                         </div>
