@@ -119,49 +119,54 @@ export function ReagentStockAlerts() {
                             Expiring Soon ({expiringBatches.length})
                         </div>
                         <div className="space-y-2">
-                            {expiringBatches.slice(0, 3).map((batch) => {
-                                const daysUntilExpiry = Math.ceil(
-                                    (new Date(batch.expiration_date).getTime() - Date.now()) /
-                                    (1000 * 60 * 60 * 24)
-                                );
-                                const isUrgent = daysUntilExpiry <= 7;
+                            {expiringBatches
+                                .filter((batch) => batch.expiration_date)
+                                .slice(0, 3)
+                                .map((batch) => {
+                                    // Safe to use expiration_date here since we filtered
+                                    const expirationDate = batch.expiration_date!;
+                                    const daysUntilExpiry = Math.ceil(
+                                        (new Date(expirationDate).getTime() - Date.now()) /
+                                        (1000 * 60 * 60 * 24)
+                                    );
+                                    const isUrgent = daysUntilExpiry <= 7;
 
-                                return (
-                                    <Link
-                                        key={batch.id}
-                                        href={`/reagents/${batch.reagent_id}`}
-                                        className="block"
-                                    >
-                                        <div
-                                            className={`flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer ${isUrgent
+                                    return (
+                                        <Link
+                                            key={batch.id}
+                                            href={`/reagents/${batch.reagent_id}`}
+                                            className="block"
+                                        >
+                                            <div
+                                                className={`flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer ${isUrgent
                                                     ? "bg-red-950/30 border-red-900/50 hover:bg-red-950/50"
                                                     : "bg-yellow-950/30 border-yellow-900/50 hover:bg-yellow-950/50"
-                                                }`}
-                                        >
-                                            <div className="flex-1">
-                                                <div className="font-medium text-sm">
-                                                    Batch {batch.batch_number}
+                                                    }`}
+                                            >
+                                                <div className="flex-1">
+                                                    <div className="font-medium text-sm">
+                                                        Batch {batch.batch_number}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Lot {batch.lot_number || 'N/A'}
+                                                    </div>
                                                 </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    Lot {batch.lot_number}
+                                                <div className="text-right">
+                                                    <div
+                                                        className={`text-sm font-bold ${isUrgent ? "text-red-400" : "text-yellow-400"
+                                                            }`}
+                                                    >
+                                                        {daysUntilExpiry} day{daysUntilExpiry !== 1 ? "s" : ""}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        {new Date(expirationDate).toLocaleDateString()}
+                                                    </div>
                                                 </div>
+                                                <ArrowRight className="w-4 h-4 ml-2 text-muted-foreground" />
                                             </div>
-                                            <div className="text-right">
-                                                <div
-                                                    className={`text-sm font-bold ${isUrgent ? "text-red-400" : "text-yellow-400"
-                                                        }`}
-                                                >
-                                                    {daysUntilExpiry} day{daysUntilExpiry !== 1 ? "s" : ""}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    {new Date(batch.expiration_date).toLocaleDateString()}
-                                                </div>
-                                            </div>
-                                            <ArrowRight className="w-4 h-4 ml-2 text-muted-foreground" />
-                                        </div>
-                                    </Link>
-                                );
-                            })}
+                                        </Link>
+                                    );
+                                })}
                             {expiringBatches.length > 3 && (
                                 <Link href="/reagents">
                                     <Button variant="ghost" size="sm" className="w-full text-xs">
