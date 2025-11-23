@@ -267,6 +267,42 @@ export async function createLineSampleWithAnalysis(data: {
 
     if (analysesError) throw analysesError;
 
+    // Also record in product_tests for unified history
+    const productTests = data.analyses.map(a => {
+        const result_status: 'in_spec' | 'out_of_spec' =
+            (a.lsl !== undefined && a.value < a.lsl) ||
+                (a.usl !== undefined && a.value > a.usl)
+                ? 'out_of_spec'
+                : 'in_spec';
+
+        return {
+            product_id: data.product_id,
+            production_lot_id: data.production_lot_id,
+            tank_id: data.tank_id,
+            sample_id: sample.id,
+            parameter_id: a.parameter_id,
+            measured_value: a.value,
+            spec_min: a.lsl ?? null,
+            spec_target: a.target ?? null,
+            spec_max: a.usl ?? null,
+            unit: a.unit ?? null,
+            result_status,
+            test_level: 'line', // Line analysis is considered 'line' level
+            tested_by: data.collected_by,
+            tested_at: data.sample_time
+        };
+    });
+
+    const { error: testsError } = await supabase
+        .from("product_tests")
+        .insert(productTests);
+
+    if (testsError) {
+        console.error("Error creating product tests:", testsError);
+        // We don't throw here to avoid failing the whole transaction if just the history fails
+        // But in a real production app we might want to ensure consistency
+    }
+
     return sample as LineSample;
 }
 

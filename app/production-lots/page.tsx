@@ -14,14 +14,20 @@ import { Plus, Factory, Clock, Package, User } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 
+import { useSearchParams, useRouter } from "next/navigation";
+
 export default function ProductionLotsPage() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const productIdFilter = searchParams.get("product");
+
     const [lots, setLots] = useState<ProductionLot[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({
         code: "",
-        product_id: "",
+        product_id: productIdFilter || "",
         factory_id: "",
         production_line: "",
         shift: "",
@@ -33,12 +39,18 @@ export default function ProductionLotsPage() {
         loadData();
     }, []);
 
+    useEffect(() => {
+        if (productIdFilter) {
+            setFormData(prev => ({ ...prev, product_id: productIdFilter }));
+        }
+    }, [productIdFilter]);
+
     const loadData = async () => {
         try {
             const [lotsData, productsData, profilesData] = await Promise.all([
                 getProductionLots(),
                 getProducts(),
-                getProfiles() // Fetch all profiles, or filter by 'manager'/'supervisor' if needed
+                getProfiles()
             ]);
             setLots(lotsData);
             setProducts(productsData);
@@ -47,6 +59,12 @@ export default function ProductionLotsPage() {
             console.error("Error loading data:", error);
         }
     };
+
+    const filteredLots = productIdFilter
+        ? lots.filter(lot => lot.product_id === productIdFilter)
+        : lots;
+
+    const selectedProduct = products.find(p => p.id === productIdFilter);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -88,13 +106,20 @@ export default function ProductionLotsPage() {
         <AppShell>
             <div className="p-6 space-y-6">
                 <SectionHeader
-                    title="Lotes de Produção"
-                    description="Gerir lotes e corridas de produção"
+                    title={selectedProduct ? `Lotes: ${selectedProduct.name}` : "Lotes de Produção"}
+                    description={selectedProduct ? `Filtrado por produto (${filteredLots.length} lotes)` : "Gerir lotes e corridas de produção"}
                     action={
-                        <Button onClick={() => setShowForm(!showForm)}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Novo Lote de Produção
-                        </Button>
+                        <div className="flex gap-2">
+                            {productIdFilter && (
+                                <Button variant="outline" onClick={() => router.push("/production-lots")}>
+                                    Limpar Filtro
+                                </Button>
+                            )}
+                            <Button onClick={() => setShowForm(!showForm)}>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Novo Lote de Produção
+                            </Button>
+                        </div>
                     }
                 />
 
@@ -189,7 +214,7 @@ export default function ProductionLotsPage() {
                 )}
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {lots.map((lot) => (
+                    {filteredLots.map((lot) => (
                         <div key={lot.id} className="bg-card p-4 rounded-lg border hover:border-primary transition-colors">
                             <div className="flex items-start gap-3">
                                 <div className="p-2 bg-primary/10 rounded">
@@ -203,7 +228,9 @@ export default function ProductionLotsPage() {
                                     {lot.product && (
                                         <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
                                             <Package className="h-3 w-3" />
-                                            <span>{lot.product.name}</span>
+                                            <Link href={`/products/${lot.product.id}`} className="hover:underline hover:text-primary">
+                                                {lot.product.name}
+                                            </Link>
                                         </div>
                                     )}
                                     {lot.production_line && (

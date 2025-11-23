@@ -102,7 +102,10 @@ export interface IntermediateLot {
     acidity?: number;
     ingredients?: Record<string, any>;
     prepared_at?: string;
-    status?: string;
+    // Lifecycle tracking fields
+    status?: 'em_producao' | 'terminado' | 'consumido';
+    started_at?: string;
+    completed_at?: string;
+    consumed_at?: string;
     production_lot?: ProductionLot;
 }
-
