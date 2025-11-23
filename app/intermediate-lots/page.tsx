@@ -13,6 +13,7 @@ import { IntermediateLotsDataTable } from "@/components/production/IntermediateL
 import { columns } from "@/components/production/IntermediateLotsColumns";
 import { IntermediateLotCard } from "@/components/production/IntermediateLotCard";
 import { Badge } from "@/components/ui/badge";
+import { StateChangeDialog } from "@/components/production/StateChangeDialog";
 
 export default function IntermediateLotsPage() {
     const [lots, setLots] = useState<IntermediateLot[]>([]);
@@ -40,9 +41,17 @@ export default function IntermediateLotsPage() {
         }
     };
 
+    const [selectedLot, setSelectedLot] = useState<IntermediateLot | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
     const handleChangeState = (lot: IntermediateLot) => {
-        // TODO: Implement state change dialog
-        console.log("Change state for lot:", lot);
+        setSelectedLot(lot);
+        setIsDialogOpen(true);
+    };
+
+    const handleStateChangeSuccess = () => {
+        loadData();
+        setSelectedLot(null);
     };
 
     // Calculate stats
@@ -177,6 +186,13 @@ export default function IntermediateLotsPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                <StateChangeDialog
+                    open={isDialogOpen}
+                    onOpenChange={setIsDialogOpen}
+                    lot={selectedLot}
+                    onSuccess={handleStateChangeSuccess}
+                />
             </div>
         </AppShell>
     );

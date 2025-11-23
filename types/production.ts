@@ -108,4 +108,5 @@ export interface IntermediateLot {
     completed_at?: string;
     consumed_at?: string;
     production_lot?: ProductionLot;
+    tank_id?: string;
 }
