@@ -31,10 +31,40 @@ import { getReagents, getLowStockReagents } from "@/lib/queries/reagents";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
+interface TopConsumer {
+    reagent: string;
+    quantity: number;
+}
+
+interface MovementTypeSummary {
+    type: string;
+    count: number;
+}
+
+interface LowStockReagent {
+    name: string;
+    current: number;
+    min: number;
+}
+
+interface ReagentConsumptionData {
+    summary: {
+        totalReagents: number;
+        totalWithdrawn: string;
+        totalReceived: string;
+        lowStockCount: number;
+        withdrawalCount: number;
+        avgConsumption: string;
+    };
+    topConsumers: TopConsumer[];
+    movementsByType: MovementTypeSummary[];
+    lowStockReagents: LowStockReagent[];
+}
+
 export default function ReagentConsumptionReport() {
     const [period, setPeriod] = useState("2024-11");
     const [loading, setLoading] = useState(true);
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<ReagentConsumptionData | null>(null);
 
     useEffect(() => {
         loadReportData();
@@ -59,7 +89,7 @@ export default function ReagentConsumptionReport() {
         }
     }
 
-    function processReagentData(movements: any[], reagents: any[], lowStock: any[]) {
+    function processReagentData(movements: any[], reagents: any[], lowStock: any[]): ReagentConsumptionData {
         const withdrawals = movements.filter((m) => m.movement_type === "withdrawal");
         const entries = movements.filter((m) => m.movement_type === "entry");
 
@@ -76,9 +106,9 @@ export default function ReagentConsumptionReport() {
             return acc;
         }, {} as Record<string, number>);
 
-        const topConsumers = Object.entries(byReagent)
-            .map(([name, quantity]) => ({ reagent: name, quantity }))
-            .sort((a: { quantity: number }, b: { quantity: number }) => b.quantity - a.quantity)
+        const topConsumers: TopConsumer[] = Object.entries(byReagent)
+            .map(([name, quantity]) => ({ reagent: name, quantity: Number(quantity) }))
+            .sort((a, b) => b.quantity - a.quantity)
             .slice(0, 5);
 
         return {
@@ -104,7 +134,7 @@ export default function ReagentConsumptionReport() {
         };
     }
 
-    function generateDemoData() {
+    function generateDemoData(): ReagentConsumptionData {
         return {
             summary: {
                 totalReagents: 45,
