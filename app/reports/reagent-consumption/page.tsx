@@ -78,7 +78,7 @@ export default function ReagentConsumptionReport() {
 
         const topConsumers = Object.entries(byReagent)
             .map(([name, quantity]) => ({ reagent: name, quantity }))
-            .sort((a, b) => b.quantity - a.quantity)
+            .sort((a: { quantity: number }, b: { quantity: number }) => b.quantity - a.quantity)
             .slice(0, 5);
 
         return {
