@@ -88,19 +88,19 @@ export default function ProductionLotsPage() {
         <AppShell>
             <div className="p-6 space-y-6">
                 <SectionHeader
-                    title="Production Lots"
-                    description="Manage production runs and batches"
+                    title="Lotes de Produção"
+                    description="Gerir lotes e corridas de produção"
                     action={
                         <Button onClick={() => setShowForm(!showForm)}>
                             <Plus className="mr-2 h-4 w-4" />
-                            New Production Lot
+                            Novo Lote de Produção
                         </Button>
                     }
                 />
 
                 {showForm && (
                     <div className="bg-card p-6 rounded-lg border">
-                        <h3 className="text-lg font-semibold mb-4">New Production Lot</h3>
+                        <h3 className="text-lg font-semibold mb-4">Novo Lote de Produção</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -217,9 +217,14 @@ export default function ProductionLotsPage() {
                                     </div>
 
                                     <div className="mt-3 flex gap-2">
+                                        <Link href={`/tanks?lot=${lot.id}`}>
+                                            <Button size="sm" variant="default">
+                                                Ver Tanques
+                                            </Button>
+                                        </Link>
                                         <Link href={`/shared/forms/production_lot/${lot.id}`}>
                                             <Button size="sm" variant="outline">
-                                                Forms
+                                                Formulários
                                             </Button>
                                         </Link>
                                         {lot.status === "open" && (
@@ -228,7 +233,7 @@ export default function ProductionLotsPage() {
                                                 variant="outline"
                                                 onClick={() => handleStatusChange(lot.id, "closed")}
                                             >
-                                                Close
+                                                Fechar
                                             </Button>
                                         )}
                                     </div>
@@ -241,7 +246,7 @@ export default function ProductionLotsPage() {
                 {lots.length === 0 && !showForm && (
                     <div className="text-center py-12 text-muted-foreground">
                         <Factory className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No production lots yet. Click "New Production Lot" to get started.</p>
+                        <p>Nenhum lote de produção criado. Clique em "Novo Lote de Produção" para começar.</p>
                     </div>
                 )}
             </div>

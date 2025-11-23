@@ -11,6 +11,9 @@ import { TopAnalysts } from "@/components/dashboard/TopAnalysts";
 import { ReleasedBlockedLots } from "@/components/dashboard/ReleasedBlockedLots";
 import { CapabilityWindow } from "@/components/dashboard/CapabilityWindow";
 import { ShiftNotes } from "@/components/dashboard/ShiftNotes";
+import { ReagentStockAlerts } from "@/components/dashboard/ReagentStockAlerts";
+import { ProductionTrendChart } from "@/components/dashboard/ProductionTrendChart";
+import { QualityMetricsOverview } from "@/components/dashboard/QualityMetricsOverview";
 
 export default function DashboardPage() {
     return (
@@ -22,6 +25,19 @@ export default function DashboardPage() {
                         <WelcomeSection />
                     </div>
                     <InstantAlerts />
+                </div>
+
+                {/* NEW: Priority Widgets - Reagents, Production, Quality */}
+                <div className="grid gap-6 md:grid-cols-3">
+                    <ChartErrorBoundary>
+                        <ReagentStockAlerts />
+                    </ChartErrorBoundary>
+                    <ChartErrorBoundary>
+                        <ProductionTrendChart />
+                    </ChartErrorBoundary>
+                    <ChartErrorBoundary>
+                        <QualityMetricsOverview />
+                    </ChartErrorBoundary>
                 </div>
 
                 {/* Process Window and Analysis Total */}

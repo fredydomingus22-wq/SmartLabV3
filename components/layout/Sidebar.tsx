@@ -30,12 +30,12 @@ import { SidebarGroup } from "./SidebarGroup"
 const sidebarGroups = [
     {
         id: "production",
-        name: "Production",
+        name: "Produção",
         icon: Factory,
         items: [
-            { name: "Production Lots", href: "/production-lots", icon: Factory },
-            { name: "Intermediate Lots", href: "/intermediate-lots", icon: Boxes },
-            { name: "Finished Lots", href: "/finished-lots", icon: Package },
+            { name: "Lotes de Produção", href: "/production-lots", icon: Factory },
+            { name: "Tanques / Produto Intermédio", href: "/tanks", icon: Boxes },
+            { name: "Análises de Linha", href: "/line-analysis", icon: TestTube },
         ],
         defaultExpanded: true,
     },
