@@ -4,7 +4,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ReagentWithStock } from "@/types/reagent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, MoreHorizontal, Eye, FlaskConical, AlertTriangle, Skull, Flame, Droplets } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Eye, FlaskConical, AlertTriangle, Skull, Flame, Droplets, ArrowDownToLine } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -139,7 +139,7 @@ export const columns: ColumnDef<ReagentWithStock>[] = [
     },
     {
         id: "actions",
-        cell: ({ row }) => {
+        cell: ({ row, table }) => {
             const reagent = row.original;
 
             return (
@@ -164,9 +164,23 @@ export const columns: ColumnDef<ReagentWithStock>[] = [
                                 View Details
                             </DropdownMenuItem>
                         </Link>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => {
+                                // Trigger withdrawal form via table meta
+                                (table.options.meta as any)?.onWithdraw?.(reagent);
+                            }}
+                        >
                             <Droplets className="mr-2 h-4 w-4" />
                             Quick Withdrawal
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => {
+                                // Trigger entry form via table meta
+                                (table.options.meta as any)?.onEntry?.(reagent);
+                            }}
+                        >
+                            <ArrowDownToLine className="mr-2 h-4 w-4" />
+                            Quick Entry
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

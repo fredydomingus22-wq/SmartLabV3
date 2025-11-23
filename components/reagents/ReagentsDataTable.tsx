@@ -34,11 +34,15 @@ import { ChevronDown, SlidersHorizontal } from "lucide-react";
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
     data: TData[];
+    onWithdraw?: (reagent: any) => void;
+    onEntry?: (reagent: any) => void;
 }
 
 export function ReagentsDataTable<TData, TValue>({
     columns,
     data,
+    onWithdraw,
+    onEntry,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -61,6 +65,10 @@ export function ReagentsDataTable<TData, TValue>({
             columnFilters,
             columnVisibility,
             rowSelection,
+        },
+        meta: {
+            onWithdraw,
+            onEntry,
         },
     });
 
