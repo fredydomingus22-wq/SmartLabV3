@@ -90,6 +90,7 @@ export const columns: ColumnDef<ReagentWithStock>[] = [
                 </HoverCard >
             );
         },
+    },
     {
         accessorKey: "category",
         header: "Category",
