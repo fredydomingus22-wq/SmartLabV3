@@ -151,9 +151,11 @@ export async function getTestStatistics(productId: string): Promise<TestStatisti
         .eq('product_id', productId)
         .eq('result_status', 'out_of_spec');
 
-    const critical_failures = criticalTests?.filter(
-        t => (t.parameter as any)?.product_specs?.[0]?.is_critical
-    ).length || 0;
+    const critical_failures = criticalTests?.filter(t => {
+        const p = t.parameter as any;
+        const param = Array.isArray(p) ? p[0] : p;
+        return param?.product_specs?.[0]?.is_critical;
+    }).length || 0;
 
     // Count by level
     const tests_by_level = {
@@ -289,7 +291,11 @@ export async function getParameterTrend(
 
     return {
         parameter_id: parameterId,
-        parameter_name: (data?.[0]?.parameter as any)?.name || 'Unknown',
+        parameter_name: (() => {
+            const p = data?.[0]?.parameter as any;
+            const param = Array.isArray(p) ? p[0] : p;
+            return param?.name || 'Unknown';
+        })(),
         values,
         average,
         min,
