@@ -8,16 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {getTanks, getTanksByProductionLot, createTank, updateTankStatus, getProductionLots } from "@/lib/queries/production";
+import { getTanks, getTanksByProductionLot, createTank, updateTankStatus, getProductionLots } from "@/lib/queries/production";
 import { IntermediateTank, ProductionLot } from "@/types/production";
 import { Plus, Beaker, Clock, Factory, User, FileText } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
+
 export default function TanksPage() {
     const searchParams = useSearchParams();
     const lotId = searchParams.get("lot");
-    
+
     const [tanks, setTanks] = useState<IntermediateTank[]>([]);
     const [productionLots, setProductionLots] = useState<ProductionLot[]>([]);
     const [showForm, setShowForm] = useState(false);
@@ -59,7 +62,7 @@ export default function TanksPage() {
                 ...formData,
                 end_at: null
             });
-            
+
             setFormData({
                 production_lot_id: lotId || "",
                 tank_code: "",
@@ -70,7 +73,7 @@ export default function TanksPage() {
             });
             setShowForm(false);
             loadData();
-            
+
             // Redirect to ingredient registration (form builder)
             if (newTank.id) {
                 window.location.href = `/shared/forms/intermediate_tank/${newTank.id}`;
@@ -223,7 +226,7 @@ export default function TanksPage() {
                                                 Ingredientes
                                             </Button>
                                         </Link>
-                                        
+
                                         {tank.status === "active" && (
                                             <>
                                                 <Link href={`/line-analysis/new?tank=${tank.id}`}>

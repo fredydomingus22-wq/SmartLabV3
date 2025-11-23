@@ -15,6 +15,9 @@ import { toast } from "sonner";
 import { Factory, Package, User, Clock, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
+
 export default function NewLineAnalysisPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
