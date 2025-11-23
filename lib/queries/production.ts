@@ -72,9 +72,93 @@ export async function updateProductionLotStatus(id: string, status: ProductionLo
 }
 
 // ============================================================================
-// INTERMEDIATE TANKS (renamed from INTERMEDIATE LOTS)
+// PRODUCTION LOTS STATISTICS
 // ============================================================================
 
+export interface ProductionLotsStats {
+    total_lots: number;
+    active_lots: number;
+    completed_today: number;
+    avg_duration_hours: number | null;
+    lots_by_shift: Record<string, number>;
+    unique_products: number;
+    lots_by_status: Record<string, number>;
+}
+
+export async function getProductionLotsStats(): Promise<ProductionLotsStats> {
+    const supabase = createClient();
+
+    // Get all production lots with product info
+    const { data: lots, error } = await supabase
+        .from("production_lots")
+        .select(`
+            *,
+            product:products(id, name)
+        `)
+        .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Calculate stats
+    const totalLots = lots?.length || 0;
+    const activeLots = lots?.filter(lot => lot.status === 'open').length || 0;
+    const completedToday = lots?.filter(lot => {
+        if (lot.status !== 'closed' || !lot.updated_at) return false;
+        const updatedDate = new Date(lot.updated_at);
+        return updatedDate >= todayStart;
+    }).length || 0;
+
+    // Calculate average duration for closed lots
+    const closedLots = lots?.filter(lot => lot.status === 'closed' && lot.updated_at) || [];
+    let avgDurationHours: number | null = null;
+
+    if (closedLots.length > 0) {
+        const totalDuration = closedLots.reduce((sum, lot) => {
+            const created = new Date(lot.created_at).getTime();
+            const closed = new Date(lot.updated_at!).getTime();
+            return sum + (closed - created);
+        }, 0);
+        avgDurationHours = Math.round((totalDuration / closedLots.length) / (1000 * 60 * 60) * 10) / 10;
+    }
+
+    // Lots by shift
+    const lotsByShift: Record<string, number> = {};
+    lots?.forEach(lot => {
+        if (lot.shift) {
+            lotsByShift[lot.shift] = (lotsByShift[lot.shift] || 0) + 1;
+        }
+    });
+
+    // Lots by status
+    const lotsByStatus: Record<string, number> = {};
+    lots?.forEach(lot => {
+        lotsByStatus[lot.status] = (lotsByStatus[lot.status] || 0) + 1;
+    });
+
+    // Unique products count
+    const uniqueProducts = new Set(lots?.map(lot => lot.product_id) || []).size;
+
+    return {
+        total_lots: totalLots,
+        active_lots: activeLots,
+        completed_today: completedToday,
+        avg_duration_hours: avgDurationHours,
+        lots_by_shift: lotsByShift,
+        unique_products: uniqueProducts,
+        lots_by_status: lotsByStatus
+    };
+}
+
+// ============================================================================
+// INTERMEDIATE TANKS (renamed from INTERMEDIATE LOTS)
+// ============================================================================
+// NOTE: These functions use the old 'intermediate_tanks' table.
+// For new implementations, use getIntermediateLots() from the 'intermediate_lots' table.
+
+/** @deprecated Use getIntermediateLots() for new implementations. This uses the old intermediate_tanks table. */
 export async function getTanks() {
     const supabase = createClient();
     const { data, error } = await supabase
@@ -89,6 +173,7 @@ export async function getTanks() {
     return data as IntermediateTank[];
 }
 
+/** @deprecated Use getIntermediateLots() with filtering for new implementations. */
 export async function getTanksByProductionLot(lotId: string, status?: 'active' | 'finished') {
     const supabase = createClient();
     let query = supabase
@@ -109,6 +194,7 @@ export async function getTanksByProductionLot(lotId: string, status?: 'active' |
     return data as IntermediateTank[];
 }
 
+/** @deprecated Old tank system. Consider migrating to intermediate_lots table. */
 export async function getTankById(id: string) {
     const supabase = createClient();
     const { data, error } = await supabase
@@ -124,6 +210,7 @@ export async function getTankById(id: string) {
     return data as IntermediateTank;
 }
 
+/** @deprecated Use the new intermediate lots creation workflow (/intermediate-lots/create). */
 export async function createTank(tank: Omit<IntermediateTank, "id" | "created_at" | "production_lot">) {
     const supabase = createClient();
     const { data, error } = await supabase
@@ -136,6 +223,7 @@ export async function createTank(tank: Omit<IntermediateTank, "id" | "created_at
     return data as IntermediateTank;
 }
 
+/** @deprecated Use StateChangeDialog for intermediate lots status updates. */
 export async function updateTankStatus(id: string, status: 'active' | 'finished', endAt?: string) {
     const supabase = createClient();
     const updates: any = { status };

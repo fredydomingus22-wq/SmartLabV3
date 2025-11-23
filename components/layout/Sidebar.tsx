@@ -22,7 +22,10 @@ import {
     TestTube,
     Boxes,
     Sparkles,
-    Wrench
+    Wrench,
+    UserCog,
+    TrendingUp,
+    Warehouse
 } from "lucide-react"
 import { SidebarGroup } from "./SidebarGroup"
 
@@ -34,7 +37,8 @@ const sidebarGroups = [
         icon: Factory,
         items: [
             { name: "Lotes de Produção", href: "/production-lots", icon: Factory },
-            { name: "Tanques / Produto Intermédio", href: "/tanks", icon: Boxes },
+            { name: "Tanques / Produto Intermédio", href: "/intermediate-lots", icon: Boxes },
+            { name: "Produto Final", href: "/finished-lots", icon: Package },
             { name: "Análises de Linha", href: "/line-analysis", icon: TestTube },
         ],
         defaultExpanded: true,
@@ -48,6 +52,7 @@ const sidebarGroups = [
             { name: "Raw Material Lots", href: "/raw-material-lots", icon: Boxes },
             { name: "Products", href: "/products", icon: Box },
             { name: "Product Specs", href: "/product-specs", icon: FileText },
+            { name: "Stock Movements", href: "/stock-movements", icon: TrendingUp },
         ],
         defaultExpanded: true,
     },
@@ -57,6 +62,7 @@ const sidebarGroups = [
         icon: Building2,
         items: [
             { name: "Suppliers", href: "/suppliers", icon: Building2 },
+            { name: "Inventory", href: "/inventory", icon: Warehouse },
         ],
     },
     {
@@ -98,6 +104,8 @@ const sidebarGroups = [
             { name: "Form Builder", href: "/form-builder", icon: Sparkles },
             { name: "Documents", href: "/documents", icon: FileText },
             { name: "Trainings", href: "/trainings", icon: Users },
+            { name: "Technicians", href: "/technicians", icon: UserCog },
+            { name: "Reports", href: "/reports", icon: FileText },
         ],
     },
 ]

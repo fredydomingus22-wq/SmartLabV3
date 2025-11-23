@@ -116,7 +116,7 @@ export default function NewLineAnalysisClient() {
                 <div className="p-6">
                     <div className="text-center py-12 text-muted-foreground">
                         <p>Tanque não encontrado ou inválido.</p>
-                        <Link href="/tanks">
+                        <Link href="/intermediate-lots">
                             <Button variant="outline" className="mt-4">Voltar aos Tanques</Button>
                         </Link>
                     </div>
@@ -129,7 +129,7 @@ export default function NewLineAnalysisClient() {
         <AppShell>
             <div className="p-6 space-y-6 max-w-5xl mx-auto">
                 <div className="flex items-center gap-4 mb-6">
-                    <Link href="/tanks">
+                    <Link href="/intermediate-lots">
                         <Button variant="ghost" size="icon">
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
@@ -206,7 +206,7 @@ export default function NewLineAnalysisClient() {
 
                 {/* Actions */}
                 <div className="flex justify-end gap-4 pt-6">
-                    <Link href="/tanks">
+                    <Link href="/intermediate-lots">
                         <Button variant="outline" type="button">Cancelar</Button>
                     </Link>
                     <Button

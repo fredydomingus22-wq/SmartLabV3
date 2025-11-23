@@ -244,9 +244,9 @@ export default function ProductionLotsPage() {
                                     </div>
 
                                     <div className="mt-3 flex gap-2">
-                                        <Link href={`/tanks?lot=${lot.id}`}>
+                                        <Link href={`/intermediate-lots?lot=${lot.id}`}>
                                             <Button size="sm" variant="default">
-                                                Ver Tanques
+                                                Ver Lotes Intermédios
                                             </Button>
                                         </Link>
                                         <Link href={`/shared/forms/production_lot/${lot.id}`}>

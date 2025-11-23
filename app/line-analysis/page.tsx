@@ -65,7 +65,7 @@ export default function LineAnalysisPage() {
                     title="Análises de Linha"
                     description="Monitorização de qualidade e amostras de linha"
                     action={
-                        <Link href="/tanks">
+                        <Link href="/intermediate-lots">
                             <Button variant="outline">
                                 <Plus className="mr-2 h-4 w-4" />
                                 Nova Análise (via Tanque)
