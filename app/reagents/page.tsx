@@ -1,24 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { AppShell } from '@/components/layout/AppShell';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
-import { toast } from 'sonner';
-import { FlaskConical } from 'lucide-react';
-import { getReagents } from '@/lib/queries/reagents';
-import { ReagentWithStock } from '@/types/reagent';
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import { AppShell } from "@/components/layout/AppShell";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { Plus, BarChart3, Download } from "lucide-react";
+import { getReagents } from "@/lib/queries/reagents";
+import { ReagentWithStock } from "@/types/reagent";
+import Link from "next/link";
+import { ReagentsDataTable } from "@/components/reagents/ReagentsDataTable";
+import { columns } from "@/components/reagents/columns";
 
 export default function ReagentsPage() {
     const [reagents, setReagents] = useState<ReagentWithStock[]>([]);
@@ -40,7 +33,8 @@ export default function ReagentsPage() {
         }
     };
 
-    const lowStockCount = reagents.filter(r => r.low_stock).length;
+    const lowStockCount = reagents.filter((r) => r.low_stock).length;
+    const expiringCount = 3; // Mock for now, implement real logic later
 
     return (
         <AppShell>
@@ -49,95 +43,95 @@ export default function ReagentsPage() {
                     title="Reagents Management"
                     description="Track reagent inventory, expiry dates, and usage"
                     action={
-                        <Link href="/reagents/create">
-                            <Button>Add Reagent</Button>
-                        </Link>
+                        <div className="flex gap-2">
+                            <Link href="/reagents/analytics">
+                                <Button variant="outline">
+                                    <BarChart3 className="w-4 h-4 mr-2" />
+                                    Analytics
+                                </Button>
+                            </Link>
+                            <Link href="/reagents/create">
+                                <Button>
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add Reagent
+                                </Button>
+                            </Link>
+                        </div>
                     }
                 />
 
-                <div className="grid gap-4 md:grid-cols-2">
-                    <Card>
+                {/* Quick Stats */}
+                <div className="grid gap-4 md:grid-cols-4">
+                    <Card className="bg-slate-900 border-slate-800">
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Total Reagents</CardTitle>
+                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                                Total Reagents
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{reagents.length}</div>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-amber-600/50 bg-amber-900/10">
+                    <Card className="bg-slate-900 border-slate-800">
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-amber-600">Low Stock</CardTitle>
+                            <CardTitle className="text-sm font-medium text-amber-500">
+                                Low Stock
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-amber-600">{lowStockCount}</div>
+                            <div className="text-2xl font-bold text-amber-500">
+                                {lowStockCount}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-slate-900 border-slate-800">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-red-500">
+                                Expiring Soon
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-red-500">
+                                {expiringCount}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                                Next 30 days
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-slate-900 border-slate-800">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-blue-500">
+                                Value
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-blue-500">$12.4k</div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                                Total Inventory
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                <Card>
+                {/* Advanced Data Table */}
+                <Card className="bg-slate-900 border-slate-800">
                     <CardHeader>
                         <CardTitle>Reagents Inventory</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Code</TableHead>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Stock</TableHead>
-                                    <TableHead>Location</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {loading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-8">Loading...</TableCell>
-                                    </TableRow>
-                                ) : reagents.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                            No reagents registered
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    reagents.map((reagent) => (
-                                        <TableRow key={reagent.id}>
-                                            <TableCell className="font-mono">{reagent.code}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <FlaskConical className="w-4 h-4 text-muted-foreground" />
-                                                    <span className="font-medium">{reagent.name}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <span className={reagent.low_stock ? "text-amber-600 font-medium" : ""}>
-                                                    {reagent.stock_current} {reagent.unit}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-sm">{reagent.storage_location}</TableCell>
-                                            <TableCell>
-                                                {reagent.low_stock ? (
-                                                    <Badge className="bg-red-600">Low Stock</Badge>
-                                                ) : (
-                                                    <Badge className="bg-green-600">Normal</Badge>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Link href={`/reagents/${reagent.id}`}>
-                                                    <Button variant="ghost" size="sm">View</Button>
-                                                </Link>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
+                        {loading ? (
+                            <div className="text-center py-10">Loading inventory...</div>
+                        ) : (
+                            <ReagentsDataTable columns={columns} data={reagents} />
+                        )}
                     </CardContent>
                 </Card>
             </div>
         </AppShell>
     );
 }
+

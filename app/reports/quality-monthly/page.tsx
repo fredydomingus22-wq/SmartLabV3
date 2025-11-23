@@ -33,10 +33,37 @@ import { createClient } from "@/lib/supabase/client";
 
 const COLORS = ["#10b981", "#ef4444", "#f59e0b", "#3b82f6"];
 
+interface ReportData {
+    summary: {
+        totalTests: number;
+        passed: number;
+        failed: number;
+        pending: number;
+        passRate: string;
+        dpmo: number;
+        totalNCs: number;
+        criticalNCs: number;
+    };
+    statusBreakdown: {
+        name: string;
+        value: number;
+        color: string;
+    }[];
+    weeklyTrend: {
+        week: string;
+        passed: number;
+        failed: number;
+    }[];
+    ncBySeverity: {
+        name: string;
+        value: number;
+    }[];
+}
+
 export default function QualityMonthlyReport() {
     const [period, setPeriod] = useState("2024-11");
     const [loading, setLoading] = useState(true);
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<ReportData | null>(null);
 
     useEffect(() => {
         loadReportData();
@@ -74,7 +101,7 @@ export default function QualityMonthlyReport() {
         }
     }
 
-    function processQualityData(analysis: any[], ncs: any[]) {
+    function processQualityData(analysis: any[], ncs: any[]): ReportData {
         const passed = analysis.filter((a) => a.status === "passed").length;
         const failed = analysis.filter((a) => a.status === "failed").length;
         const pending = analysis.filter((a) => a.status === "pending").length;
@@ -117,7 +144,7 @@ export default function QualityMonthlyReport() {
         }));
     }
 
-    function generateDemoData() {
+    function generateDemoData(): ReportData {
         return {
             summary: {
                 totalTests: 345,
