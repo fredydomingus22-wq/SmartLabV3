@@ -24,7 +24,7 @@ function LoginForm() {
     // TEMPORARY BYPASS - Remove when Supabase is back
     const handleTemporaryBypass = () => {
         console.log("⚠️ TEMPORARY BYPASS ACTIVE - Remove in production!");
-        router.push('/dashboard');
+        window.location.href = '/dashboard';
     };
 
     const isEmailValid = useMemo(() => /\S+@\S+\.\S+/.test(email), [email]);
@@ -159,14 +159,22 @@ function LoginForm() {
                                 </Button>
 
                                 {/* TEMPORARY - Remove when Supabase is back */}
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full border-yellow-600 text-yellow-600 hover:bg-yellow-600/10"
-                                    onClick={handleTemporaryBypass}
-                                >
-                                    ⚠️ Bypass Login (Supabase Maintenance)
-                                </Button>
+                                <div className="space-y-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full border-yellow-600 text-yellow-600 hover:bg-yellow-600/10"
+                                        onClick={handleTemporaryBypass}
+                                    >
+                                        ⚠️ Bypass Login (Supabase Maintenance)
+                                    </Button>
+                                    <p className="text-xs text-center text-slate-500">
+                                        ou clique{" "}
+                                        <Link href="/dashboard" className="text-yellow-500 hover:underline">
+                                            aqui para ir direto ao dashboard
+                                        </Link>
+                                    </p>
+                                </div>
                             </form>
                         </CardContent>
                     </Card>
