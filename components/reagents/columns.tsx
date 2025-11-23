@@ -60,10 +60,11 @@ export const columns: ColumnDef<ReagentWithStock>[] = [
                 </Button>
             );
         },
-        const hazard = row.original.hazard_class || "";
-        const reagent = row.original;
+        cell: ({ row }) => {
+            const hazard = row.original.hazard_class || "";
+            const reagent = row.original;
 
-        return(
+            return (
                 <HoverCard>
                     <HoverCardTrigger asChild>
                         <div className="flex items-center gap-2 cursor-pointer">
@@ -88,14 +89,14 @@ export const columns: ColumnDef<ReagentWithStock>[] = [
                     </HoverCardContent>
                 </HoverCard >
             );
-    },
+        },
 {
-    accessorKey: "category",
+        accessorKey: "category",
         header: "Category",
-            cell: ({ row }) => <Badge variant="outline" className="capitalize">{row.getValue("category")}</Badge>,
+        cell: ({ row }) => <Badge variant="outline" className="capitalize">{row.getValue("category")}</Badge>,
     },
-{
-    accessorKey: "stock_current",
+    {
+        accessorKey: "stock_current",
         header: ({ column }) => {
             return (
                 <Button
@@ -107,36 +108,36 @@ export const columns: ColumnDef<ReagentWithStock>[] = [
                 </Button>
             );
         },
-            cell: ({ row }) => {
-                const stock = parseFloat(row.getValue("stock_current"));
-                const unit = row.original.unit;
-                const isLow = row.original.low_stock;
+        cell: ({ row }) => {
+            const stock = parseFloat(row.getValue("stock_current"));
+            const unit = row.original.unit;
+            const isLow = row.original.low_stock;
 
-                return (
-                    <div className={`font-medium ${isLow ? "text-red-500" : "text-green-500"}`}>
-                        {stock} {unit}
-                    </div>
-                );
-            },
+            return (
+                <div className={`font-medium ${isLow ? "text-red-500" : "text-green-500"}`}>
+                    {stock} {unit}
+                </div>
+            );
+        },
     },
-{
-    accessorKey: "storage_location",
+    {
+        accessorKey: "storage_location",
         header: "Location",
     },
-{
-    accessorKey: "status",
+    {
+        accessorKey: "status",
         header: "Status",
-            cell: ({ row }) => {
-                const isLow = row.original.low_stock;
-                return (
-                    <Badge className={isLow ? "bg-red-600" : "bg-green-600"}>
-                        {isLow ? "Low Stock" : "Normal"}
-                    </Badge>
-                );
-            },
+        cell: ({ row }) => {
+            const isLow = row.original.low_stock;
+            return (
+                <Badge className={isLow ? "bg-red-600" : "bg-green-600"}>
+                    {isLow ? "Low Stock" : "Normal"}
+                </Badge>
+            );
+        },
     },
-{
-    id: "actions",
+    {
+        id: "actions",
         cell: ({ row }) => {
             const reagent = row.original;
 
