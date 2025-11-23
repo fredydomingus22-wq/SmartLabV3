@@ -113,6 +113,7 @@ export default function ReagentDetailPage() {
                 quantity_remaining: batchForm.received_quantity,
                 unit: reagent?.unit || "L",
                 qc_status: "pending",
+                received_date: new Date().toISOString().split('T')[0], // Today's date
             });
             toast.success("Batch received successfully");
             setBatchDialogOpen(false);
@@ -137,6 +138,7 @@ export default function ReagentDetailPage() {
                 reagent_id: reagentId,
                 ...usageForm,
                 unit: reagent?.unit || "L",
+                used_at: new Date().toISOString(), // Current timestamp
             });
             toast.success("Usage recorded successfully");
             setUsageDialogOpen(false);

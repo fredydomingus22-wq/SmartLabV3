@@ -1,7 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// TEMPORARY: Authentication disabled while Supabase is in maintenance
+// Uncomment the code below when Supabase is back
 export async function middleware(request: NextRequest) {
+    // BYPASS ALL AUTH - TEMPORARY
+    return NextResponse.next({
+        request: {
+            headers: request.headers,
+        },
+    });
+
+    /* RESTORE THIS CODE WHEN SUPABASE IS BACK:
     let response = NextResponse.next({
         request: {
             headers: request.headers,
@@ -56,6 +66,7 @@ export async function middleware(request: NextRequest) {
     }
 
     return response;
+    */
 }
 
 export const config = {

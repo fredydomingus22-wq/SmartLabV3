@@ -21,7 +21,7 @@ import { createReagent } from "@/lib/queries/reagents";
 
 export default function CreateReagentPage() {
     const router = useRouter();
-    const [loading, set Loading] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         code: "",
         name: "",
