@@ -1,23 +1,43 @@
 {
-    "chatgpt.openOnStartup": true,
-    "chatgpt.runCodexInWindowsSubsystemForLinux": true,
-    "css.lint.unknownAtRules": "ignore",
-    "scss.lint.unknownAtRules": "ignore",
-    "files.associations": {
-        "*.css": "tailwindcss"
-    },
-    "editor.quickSuggestions": {
-        "strings": true
-    },
-    "css.validate": false,
-    "tailwindCSS.experimental.classRegex": [
-        [
-            "cva\\(([^)]*)\\)",
-            "[\"'`]([^\"'`]*).*?[\"'`]"
-        ],
-        [
-            "cx\\(([^)]*)\\)",
-            "(?:'|\"|`)([^']*)(?:'|\"|`)"
-        ]
+  "chatgpt.openOnStartup": true,
+  "chatgpt.runCodexInWindowsSubsystemForLinux": true,
+  "css.lint.unknownAtRules": "ignore",
+  "css.validate": false,
+  "deno.enable": false,
+  "deno.enablePaths": [
+    "supabase/functions"
+  ],
+  "deno.lint": true,
+  "deno.unstable": [
+    "bare-node-builtins",
+    "byonm",
+    "sloppy-imports",
+    "unsafe-proto",
+    "webgpu",
+    "broadcast-channel",
+    "worker-options",
+    "cron",
+    "kv",
+    "ffi",
+    "fs",
+    "http",
+    "net"
+  ],
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "scss.lint.unknownAtRules": "ignore",
+  "tailwindCSS.experimental.classRegex": [
+    [
+      "cva\\(([^)]*)\\)",
+      "[\"'`]([^\"'`]*).*?[\"'`]"
+    ],
+    [
+      "cx\\(([^)]*)\\)",
+      "(?:'|\"|`)([^']*)(?:'|\"|`)"
     ]
+  ]
 }
