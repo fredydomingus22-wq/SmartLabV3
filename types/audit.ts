@@ -1,14 +1,13 @@
-export interface AuditLog {
+export interface AuditEntry {
     id: string;
-    action: string;
-    entity_type: string;
-    entity_id?: string;
-    details?: any;
-    performed_by: string;
+    table_name: string;
+    operation: "INSERT" | "UPDATE" | "DELETE";
+    row_id: string;
+    old_data?: Record<string, unknown> | null;
+    new_data?: Record<string, unknown> | null;
+    performed_by: string | null;
     performed_at: string;
-    ip_address?: string;
-    performer?: {
-        full_name: string;
-        email: string;
-    };
 }
+
+// Backwards compatibility alias for legacy imports
+export type AuditLog = AuditEntry;

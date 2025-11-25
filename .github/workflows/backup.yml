@@ -1,0 +1,37 @@
+name: Backup Database
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # daily at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }} # e.g. postgres://postgres:password@db.host:5432/postgres
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Create backup
+        run: |
+          timestamp=$(date -u +"%Y%m%dT%H%M%SZ")
+          supabase db dump --db-url "$SUPABASE_DB_URL" --data --schema public --file backup_$timestamp.sql
+        shell: bash
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup
+          path: backup_*.sql

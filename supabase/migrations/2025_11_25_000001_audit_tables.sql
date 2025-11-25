@@ -16,10 +16,18 @@ create table public.audit_log (
 -- Enable row level security for audit_log (only admin can read)
 alter table public.audit_log enable row level security;
 create policy "admin can select" on public.audit_log for select using (auth.role() = 'admin');
+create policy "allow inserts via triggers" on public.audit_log for insert with check (true);
+
+-- Helpful index for lookups by table + row
+create index if not exists idx_audit_log_table_row on public.audit_log(table_name, row_id);
 
 -- Function to insert audit record
 create or replace function public.record_audit()
-returns trigger language plpgsql as $$
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
 begin
     insert into public.audit_log (
         table_name, operation, row_id, old_data, new_data, performed_by
@@ -32,6 +40,27 @@ begin
         auth.uid()
     );
     return null;
+end;
+$$;
+
+-- RPC helper to fetch audit history for a specific row
+create or replace function public.fetch_audit_log(p_table_name text, p_row_id uuid)
+returns setof public.audit_log
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if auth.role() <> 'admin' then
+        raise exception 'insufficient_privilege' using message = 'Only admin can view audit log';
+    end if;
+
+    return query
+    select *
+    from public.audit_log
+    where table_name = p_table_name
+      and row_id = p_row_id
+    order by performed_at desc;
 end;
 $$;
 

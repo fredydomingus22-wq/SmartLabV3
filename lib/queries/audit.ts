@@ -1,42 +1,25 @@
 import { createClient } from "@/lib/supabase/client";
-import { AuditLog } from "@/types/audit";
+import { AuditEntry } from "@/types/audit";
 
-export async function getAuditLogs(limit = 50) {
+export async function getAuditLogs(limit = 50): Promise<AuditEntry[]> {
     const supabase = createClient();
     const { data, error } = await supabase
-        .from("audit_logs")
-        .select(`
-            *,
-            performer:profiles(full_name, email)
-        `)
+        .from("audit_log")
+        .select("*")
         .order("performed_at", { ascending: false })
         .limit(limit);
 
     if (error) throw error;
-    return data as AuditLog[];
+    return data as AuditEntry[];
 }
 
-export async function logAction(
-    action: string,
-    entityType: string,
-    entityId: string | null,
-    details: any = null
-) {
+export async function fetchAuditLog(tableName: string, rowId: string): Promise<AuditEntry[]> {
     const supabase = createClient();
+    const { data, error } = await supabase.rpc("fetch_audit_log", {
+        p_table_name: tableName,
+        p_row_id: rowId,
+    });
 
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { error } = await supabase
-        .from("audit_logs")
-        .insert({
-            action,
-            entity_type: entityType,
-            entity_id: entityId,
-            details,
-            performed_by: user.id
-        });
-
-    if (error) console.error("Failed to log action:", error);
+    if (error) throw error;
+    return data as AuditEntry[];
 }
