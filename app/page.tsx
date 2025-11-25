@@ -1,7 +1,17 @@
-import { redirect } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
-// TEMPORARY: Auto-redirect to dashboard while Supabase is in maintenance
-// Remove this and restore login when Supabase is back
+/**
+ * Root page - Middleware handles authentication and redirects
+ * Authenticated users -> /dashboard
+ * Unauthenticated users -> /login
+ */
 export default function Home() {
-    redirect('/dashboard');
+    return (
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+            <div className="text-center space-y-4">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+                <p className="text-slate-400">A carregar...</p>
+            </div>
+        </div>
+    );
 }

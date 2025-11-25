@@ -1,16 +1,28 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
 import { createProductionLot } from "@/lib/queries/production";
-import { Product, ProductionLot } from "@/types/production";
+import { Product } from "@/types/production";
 import { Profile } from "@/lib/queries/profiles";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Sparkles } from "lucide-react";
+import { productionLotSchema, ProductionLotFormValues } from "@/lib/validations/production";
 
 interface CreateLotDialogProps {
     open: boolean;
@@ -29,20 +41,37 @@ export function CreateLotDialog({
     onSuccess,
     preSelectedProductId
 }: CreateLotDialogProps) {
-    const [formData, setFormData] = useState({
-        code: "",
-        product_id: preSelectedProductId || "",
-        factory_id: "",
-        production_line: "",
-        shift: "",
-        status: "open" as ProductionLot["status"]
-    });
+    const { toast } = useToast();
     const [loading, setLoading] = useState(false);
-    const [autoGenerateCode, setAutoGenerateCode] = useState(false);
 
-    // Auto-generate lot code when enabled
-    const generateLotCode = () => {
-        const selectedProduct = products.find(p => p.id === formData.product_id);
+    const form = useForm<ProductionLotFormValues>({
+        resolver: zodResolver(productionLotSchema),
+        defaultValues: {
+            code: "",
+            product_id: preSelectedProductId || "",
+            factory_id: "",
+            production_line: "",
+            shift: "",
+            status: "open",
+        },
+    });
+
+    // Reset form when dialog opens or preSelectedProductId changes
+    useEffect(() => {
+        if (open) {
+            form.reset({
+                code: "",
+                product_id: preSelectedProductId || "",
+                factory_id: "",
+                production_line: "",
+                shift: "",
+                status: "open",
+            });
+        }
+    }, [open, preSelectedProductId, form]);
+
+    const generateLotCode = (productId: string) => {
+        const selectedProduct = products.find(p => p.id === productId);
         if (!selectedProduct) return "";
 
         const date = new Date();
@@ -53,57 +82,52 @@ export function CreateLotDialog({
         return `LOT-${productCode}-${dateStr}-${randomSeq}`;
     };
 
-    const handleProductChange = (productId: string) => {
-        setFormData({ ...formData, product_id: productId });
-        if (autoGenerateCode) {
-            const code = generateLotCode();
-            if (code) {
-                setFormData(prev => ({ ...prev, product_id: productId, code }));
-            }
-        }
-    };
-
     const handleAutoGenerate = () => {
-        const code = generateLotCode();
-        if (code) {
-            setFormData({ ...formData, code });
-            toast.info("Código gerado automaticamente");
-        } else {
-            toast.error("Selecione um produto primeiro");
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!formData.code || !formData.product_id) {
-            toast.error("Preencha os campos obrigatórios");
+        const productId = form.getValues("product_id");
+        if (!productId) {
+            toast({
+                variant: "destructive",
+                title: "Erro",
+                description: "Selecione um produto primeiro.",
+            });
             return;
         }
 
+        const code = generateLotCode(productId);
+        if (code) {
+            form.setValue("code", code);
+            toast({
+                title: "Código Gerado",
+                description: "Código do lote gerado automaticamente.",
+            });
+        }
+    };
+
+    const onSubmit = async (data: ProductionLotFormValues) => {
         setLoading(true);
         try {
             await createProductionLot({
-                ...formData,
-                factory_id: formData.factory_id || undefined,
-                production_line: formData.production_line || undefined,
-                shift: formData.shift || undefined
+                ...data,
+                factory_id: data.factory_id || undefined,
+                production_line: data.production_line || undefined,
+                shift: data.shift || undefined
             });
 
-            toast.success("Lote de produção criado com sucesso!");
-            setFormData({
-                code: "",
-                product_id: preSelectedProductId || "",
-                factory_id: "",
-                production_line: "",
-                shift: "",
-                status: "open"
+            toast({
+                title: "Sucesso",
+                description: "Lote de produção criado com sucesso!",
+                variant: "success",
             });
+
             onOpenChange(false);
             onSuccess();
         } catch (error) {
             console.error("Error creating lot:", error);
-            toast.error("Erro ao criar lote de produção");
+            toast({
+                variant: "destructive",
+                title: "Erro",
+                description: "Erro ao criar lote de produção.",
+            });
         } finally {
             setLoading(false);
         }
@@ -122,124 +146,152 @@ export function CreateLotDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="md:col-span-2">
-                            <Label htmlFor="code">Código do Lote *</Label>
-                            <div className="flex gap-2 mt-1.5">
-                                <Input
-                                    id="code"
-                                    placeholder="e.g., LOT-PRD-20241123-001"
-                                    value={formData.code}
-                                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                                    required
-                                    className="flex-1"
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="md:col-span-2">
+                                <FormField
+                                    control={form.control}
+                                    name="code"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Código do Lote *</FormLabel>
+                                            <div className="flex gap-2">
+                                                <FormControl>
+                                                    <Input placeholder="e.g., LOT-PRD-20241123-001" {...field} />
+                                                </FormControl>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={handleAutoGenerate}
+                                                    title="Gerar código automaticamente"
+                                                >
+                                                    <Sparkles className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
                                 />
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={handleAutoGenerate}
-                                    title="Gerar código automaticamente"
-                                >
-                                    <Sparkles className="h-4 w-4" />
-                                </Button>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Clique no ícone para gerar automaticamente
-                            </p>
-                        </div>
 
-                        <div className="md:col-span-2">
-                            <Label htmlFor="product">Produto *</Label>
-                            <Select
-                                value={formData.product_id}
-                                onValueChange={handleProductChange}
-                                required
-                            >
-                                <SelectTrigger id="product" className="mt-1.5">
-                                    <SelectValue placeholder="Selecione o produto" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {products.map((product) => (
-                                        <SelectItem key={product.id} value={product.id}>
-                                            {product.name} ({product.sku})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                            <div className="md:col-span-2">
+                                <FormField
+                                    control={form.control}
+                                    name="product_id"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Produto *</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Selecione o produto" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {products.map((product) => (
+                                                        <SelectItem key={product.id} value={product.id}>
+                                                            {product.name} ({product.sku})
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
 
-                        <div>
-                            <Label htmlFor="factory">Gestor de Fábrica</Label>
-                            <Select
-                                value={formData.factory_id}
-                                onValueChange={(value) => setFormData({ ...formData, factory_id: value })}
-                            >
-                                <SelectTrigger id="factory" className="mt-1.5">
-                                    <SelectValue placeholder="Selecione o gestor" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {profiles.map((profile) => (
-                                        <SelectItem key={profile.id} value={profile.id}>
-                                            {profile.full_name || profile.email}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div>
-                            <Label htmlFor="shift">Turno</Label>
-                            <Select
-                                value={formData.shift}
-                                onValueChange={(value) => setFormData({ ...formData, shift: value })}
-                            >
-                                <SelectTrigger id="shift" className="mt-1.5">
-                                    <SelectValue placeholder="Selecione o turno" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Morning">Manhã</SelectItem>
-                                    <SelectItem value="Afternoon">Tarde</SelectItem>
-                                    <SelectItem value="Night">Noite</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="md:col-span-2">
-                            <Label htmlFor="line">Linha de Produção</Label>
-                            <Input
-                                id="line"
-                                placeholder="e.g., Linha A"
-                                value={formData.production_line}
-                                onChange={(e) => setFormData({ ...formData, production_line: e.target.value })}
-                                className="mt-1.5"
+                            <FormField
+                                control={form.control}
+                                name="factory_id"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Gestor de Fábrica</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecione o gestor" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {profiles.map((profile) => (
+                                                    <SelectItem key={profile.id} value={profile.id}>
+                                                        {profile.full_name || profile.email}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
                             />
-                        </div>
-                    </div>
 
-                    <div className="flex gap-2 pt-4">
-                        <Button type="submit" disabled={loading} className="flex-1">
-                            {loading ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Criando...
-                                </>
-                            ) : (
-                                "Criar Lote"
-                            )}
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                            disabled={loading}
-                        >
-                            Cancelar
-                        </Button>
-                    </div>
-                </form>
+                            <FormField
+                                control={form.control}
+                                name="shift"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Turno</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecione o turno" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="Morning">Manhã</SelectItem>
+                                                <SelectItem value="Afternoon">Tarde</SelectItem>
+                                                <SelectItem value="Night">Noite</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <div className="md:col-span-2">
+                                <FormField
+                                    control={form.control}
+                                    name="production_line"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Linha de Produção</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g., Linha A" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-4">
+                            <Button type="submit" disabled={loading} className="flex-1">
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Criando...
+                                    </>
+                                ) : (
+                                    "Criar Lote"
+                                )}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                                disabled={loading}
+                            >
+                                Cancelar
+                            </Button>
+                        </div>
+                    </form>
+                </Form>
             </DialogContent>
         </Dialog>
     );
 }
+

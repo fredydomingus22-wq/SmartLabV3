@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import {
     LayoutDashboard,
     Factory,
@@ -25,11 +25,14 @@ import {
     Wrench,
     UserCog,
     TrendingUp,
-    Warehouse
-} from "lucide-react"
-import { SidebarGroup } from "./SidebarGroup"
+    Warehouse,
+} from "lucide-react";
+import { SidebarGroup } from "./SidebarGroup";
+// Role‑based UI helpers
+import { useCurrentRole } from "@/lib/auth/role";
+import { rolePermissions } from "@/lib/auth/rolePermissions";
 
-// Define sidebar groups with their items
+// Define sidebar groups (unchanged list of modules)
 const sidebarGroups = [
     {
         id: "production",
@@ -40,6 +43,7 @@ const sidebarGroups = [
             { name: "Tanques / Produto Intermédio", href: "/intermediate-lots", icon: Boxes },
             { name: "Produto Final", href: "/finished-lots", icon: Package },
             { name: "Análises de Linha", href: "/line-analysis", icon: TestTube },
+            { name: "Configurações de Produção", href: "/production-settings", icon: Settings },
         ],
         defaultExpanded: true,
     },
@@ -106,12 +110,18 @@ const sidebarGroups = [
             { name: "Trainings", href: "/trainings", icon: Users },
             { name: "Technicians", href: "/technicians", icon: UserCog },
             { name: "Reports", href: "/reports", icon: FileText },
+            { name: "Admin Settings", href: "/admin/settings", icon: Settings },
+            { name: "CIP Manager", href: "/cip-manager", icon: Wrench },
         ],
     },
-]
+];
 
 export function Sidebar() {
-    const pathname = usePathname()
+    const pathname = usePathname();
+    const role = useCurrentRole();
+    // Determine allowed groups for the current role (fallback to empty array)
+    const allowedGroupIds = role ? rolePermissions[role] ?? [] : [];
+    const filteredGroups = sidebarGroups.filter((g) => allowedGroupIds.includes(g.id));
 
     return (
         <div className="fixed left-0 top-0 bottom-0 w-64 border-r border-slate-700 bg-slate-950 overflow-y-auto z-40">
@@ -121,13 +131,11 @@ export function Sidebar() {
                     <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-slate-100 to-slate-400 bg-clip-text text-transparent">
                         SmartLab
                     </h1>
-                    <p className="text-xs text-slate-500 tracking-wide uppercase mt-1">
-                        Enterprise
-                    </p>
+                    <p className="text-xs text-slate-500 tracking-wide uppercase mt-1">Enterprise</p>
                 </div>
             </div>
 
-            {/* Dashboard - Standalone */}
+            {/* Dashboard – Standalone */}
             <div className="px-4 pt-6 pb-2">
                 <Link
                     href="/dashboard"
@@ -143,25 +151,21 @@ export function Sidebar() {
                     {pathname === "/dashboard" && (
                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-r" />
                     )}
-
                     {/* Hover gradient */}
-                    <div className={cn(
-                        "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300",
-                        "bg-gradient-to-r from-slate-800/0 via-slate-700/30 to-slate-800/0"
-                    )} />
-
+                    <div
+                        className={cn(
+                            "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+                            "bg-gradient-to-r from-slate-800/0 via-slate-700/30 to-slate-800/0"
+                        )}
+                    />
                     <LayoutDashboard className={cn(
                         "mr-3 h-5 w-5 transition-all duration-200 relative z-10",
-                        pathname === "/dashboard"
-                            ? "text-emerald-400"
-                            : "text-slate-500 group-hover:text-slate-300 group-hover:scale-110"
-                    )} />
-                    <span className="relative z-10">Dashboard</span>
-
-                    {/* Glow effect */}
-                    {pathname === "/dashboard" && (
-                        <div className="absolute inset-0 bg-emerald-500/5 blur-sm" />
+                        pathname === "/dashboard" ? "text-emerald-400" : "text-slate-500 group-hover:text-slate-300 group-hover:scale-110"
                     )}
+                    />
+                    <span className="relative z-10">Dashboard</span>
+                    {/* Glow effect */}
+                    {pathname === "/dashboard" && <div className="absolute inset-0 bg-emerald-500/5 blur-sm" />}
                 </Link>
             </div>
 
@@ -172,7 +176,7 @@ export function Sidebar() {
 
             {/* Grouped Navigation */}
             <div className="px-4 pb-6 space-y-3">
-                {sidebarGroups.map((group) => (
+                {filteredGroups.map((group) => (
                     <SidebarGroup
                         key={group.id}
                         id={group.id}
@@ -187,5 +191,6 @@ export function Sidebar() {
             {/* Bottom gradient fade */}
             <div className="sticky bottom-0 h-12 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none" />
         </div>
-    )
+    );
 }
+

@@ -1,125 +1,164 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
-import { ChartErrorBoundary } from "@/components/ui/ChartErrorBoundary";
-import { WelcomeSection } from "@/components/dashboard/WelcomeSection";
-import { InstantAlerts } from "@/components/dashboard/InstantAlerts";
-import { ProcessWindow } from "@/components/dashboard/ProcessWindow";
-import { AnalysisTotal } from "@/components/dashboard/AnalysisTotal";
-import { ProductDistribution } from "@/components/dashboard/ProductDistribution";
-import { LineActivity } from "@/components/dashboard/LineActivity";
-import { KPICard } from "@/components/dashboard/KPICard";
-import { TopAnalysts } from "@/components/dashboard/TopAnalysts";
-import { ReleasedBlockedLots } from "@/components/dashboard/ReleasedBlockedLots";
-import { CapabilityWindow } from "@/components/dashboard/CapabilityWindow";
-import { ShiftNotes } from "@/components/dashboard/ShiftNotes";
-import { ReagentStockAlerts } from "@/components/dashboard/ReagentStockAlerts";
-import { ProductionTrendChart } from "@/components/dashboard/ProductionTrendChart";
-import { QualityMetricsOverview } from "@/components/dashboard/QualityMetricsOverview";
+import { getDashboardMetrics } from "@/lib/queries/dashboard";
+import { getCurrentUserProfile } from "@/lib/db-helpers";
+import { Sparkles } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrentRole } from "@/lib/auth/role";
+
+// Dashboards
+import { TechDashboard } from "./components/TechDashboard";
+import { SupervisorDashboard } from "./components/SupervisorDashboard";
+import { ManagerDashboard } from "./components/ManagerDashboard";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+
+interface DashboardMetrics {
+    releasedCount: number;
+    ncCount: number;
+    pccPrecision: string;
+    avgTurnaround: string;
+    trainingsCount: number;
+    quarantineCount: number;
+}
+
+interface UserProfile {
+    full_name?: string;
+    role?: string;
+    email?: string;
+}
 
 export default function DashboardPage() {
+    const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const role = useCurrentRole();
+
+    useEffect(() => {
+        loadDashboardData();
+
+        // Update time every minute
+        const interval = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 60000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    const loadDashboardData = async () => {
+        try {
+            const [metricsData, profileData] = await Promise.all([
+                getDashboardMetrics(),
+                getCurrentUserProfile()
+            ]);
+
+            setMetrics(metricsData);
+            setProfile(profileData);
+        } catch (error) {
+            console.error("Error loading dashboard:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getGreeting = () => {
+        const hour = currentTime.getHours();
+        if (hour < 12) return "Bom dia";
+        if (hour < 18) return "Boa tarde";
+        return "Boa noite";
+    };
+
+    const formatTime = () => {
+        return currentTime.toLocaleDateString('pt-PT', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
+
+    const renderDashboardContent = () => {
+        if (loading && !role) {
+            return <div className="p-10 text-center text-slate-500">Carregando perfil...</div>;
+        }
+
+        switch (role) {
+            case 'technician':
+                return <TechDashboard />;
+            case 'supervisor':
+                return <SupervisorDashboard />;
+            case 'manager':
+            case 'admin':
+            default:
+                return <ManagerDashboard metrics={metrics} loading={loading} />;
+        }
+    };
+
     return (
         <AppShell>
-            <div className="p-6 space-y-6 bg-slate-950">
-                {/* Welcome Section */}
-                <div className="grid gap-6 md:grid-cols-3">
-                    <div className="md:col-span-2">
-                        <WelcomeSection />
-                    </div>
-                    <InstantAlerts />
-                </div>
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 space-y-6">
+                {/* Header Section with Glassmorphism */}
+                <div className="relative group">
+                    {/* Glow Effect */}
+                    <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
 
-                {/* NEW: Priority Widgets - Reagents, Production, Quality */}
-                <div className="grid gap-6 md:grid-cols-3">
-                    <ChartErrorBoundary>
-                        <ReagentStockAlerts />
-                    </ChartErrorBoundary>
-                    <ChartErrorBoundary>
-                        <ProductionTrendChart />
-                    </ChartErrorBoundary>
-                    <ChartErrorBoundary>
-                        <QualityMetricsOverview />
-                    </ChartErrorBoundary>
-                </div>
+                    {/* Header Card */}
+                    <div className="relative bg-white/[0.03] backdrop-blur-xl rounded-3xl border border-white/10 p-8 overflow-hidden">
+                        {/* Decorative Elements */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-500/5 to-transparent rounded-full blur-3xl" />
+                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-cyan-500/5 to-transparent rounded-full blur-3xl" />
 
-                {/* Process Window and Analysis Total */}
-                <div className="grid gap-6 md:grid-cols-3">
-                    <ChartErrorBoundary>
-                        <ProcessWindow />
-                    </ChartErrorBoundary>
-                    <AnalysisTotal />
-                </div>
+                        <div className="relative flex items-start justify-between">
+                            <div className="space-y-2">
+                                {/* Badge */}
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                                    <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                                    <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">
+                                        SmartLab Enterprise
+                                    </span>
+                                </div>
 
-                {/* Product Distribution and Line Activity */}
-                <div className="grid gap-6 md:grid-cols-2">
-                    <ChartErrorBoundary>
-                        <ProductDistribution />
-                    </ChartErrorBoundary>
-                    <ChartErrorBoundary>
-                        <LineActivity />
-                    </ChartErrorBoundary>
-                </div>
+                                {/* Greeting */}
+                                <h1 className="text-4xl font-bold tracking-tight text-white">
+                                    {getGreeting()},{" "}
+                                    <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                                        {loading ? (
+                                            <Skeleton className="inline-block w-32 h-10" />
+                                        ) : (
+                                            profile?.full_name?.split(' ')[0] || 'Utilizador'
+                                        )}
+                                    </span>
+                                </h1>
 
-                {/* KPI Cards Grid */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <KPICard
-                        title="Lotes Liberados (24h)"
-                        value="48"
-                        subtitle="Target 45 min"
-                        trend={{
-                            value: "+6%",
-                            direction: "up",
-                            label: "vs semana passada"
-                        }}
-                    />
-                    <KPICard
-                        title="NCs Críticas"
-                        value="3"
-                        subtitle="2 aguardando 8D"
-                        trend={{
-                            value: "-1",
-                            direction: "down",
-                            label: "vs período anterior"
-                        }}
-                    />
-                    <KPICard
-                        title="Precisão PCC"
-                        value="98.4%"
-                        subtitle="Últimas 72h"
-                    />
-                    <KPICard
-                        title="Lab Turnaround"
-                        value="42 min"
-                        subtitle="Target 45 min"
-                    />
-                    <KPICard
-                        title="Treinamentos Ativos"
-                        value="11"
-                        subtitle="4 vencendo em 7 dias"
-                    />
-                    <KPICard
-                        title="Materiais em Quarentena"
-                        value="5"
-                        subtitle="Todos aguardam COA"
-                        trend={{
-                            value: "+2",
-                            direction: "up",
-                            label: "vs período anterior"
-                        }}
-                    />
-                </div>
+                                {/* Subtitle */}
+                                <p className="text-slate-400 text-sm">
+                                    {formatTime()}
+                                </p>
+                            </div>
 
-                {/* Bottom Section */}
-                <div className="grid gap-6 md:grid-cols-3">
-                    <ChartErrorBoundary>
-                        <ReleasedBlockedLots />
-                    </ChartErrorBoundary>
-                    <div className="space-y-6">
-                        <CapabilityWindow />
-                        <ShiftNotes />
+                            {/* Quick Stats Badge */}
+                            <div className="flex items-center gap-3">
+                                <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+                                    <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">
+                                        Status do Sistema
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                        <span className="text-sm font-semibold text-white">Operacional</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Top Analysts */}
-                <TopAnalysts />
+                {/* Role-Based Content */}
+                {renderDashboardContent()}
+
+                {/* Floating Action Button (for everyone for now, or filter inside component) */}
+                <FloatingActionButton />
             </div>
         </AppShell>
     );

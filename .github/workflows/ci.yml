@@ -1,0 +1,36 @@
+name: CI - Lint & Test
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  build:
+    name: Lint, Typecheck & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Linting
+        run: npm run lint
+
+      - name: Run Type Checking
+        run: npx tsc --noEmit
+
+      - name: Run Unit Tests
+        # Assuming 'npm test' runs Jest. If not configured yet, this step might fail or do nothing.
+        # We will ensure package.json has a test script later or now.
+        run: npm test -- --passWithNoTests

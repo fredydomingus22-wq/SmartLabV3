@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/client";
 import { ProductSpec, CreateProductSpecData } from "@/types/product";
 
+export type { ProductSpec, CreateProductSpecData };
+
 const supabase = createClient();
 
 // ============================================================================

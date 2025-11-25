@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DynamicForm } from "@/components/form-builder/DynamicForm";
@@ -15,6 +16,7 @@ import Link from "next/link";
 export default function FormViewerPage() {
     const params = useParams();
     const router = useRouter();
+    const supabase = createClient();
     const templateId = params.id as string;
 
     const [template, setTemplate] = useState<FormTemplateWithFields | null>(null);
@@ -44,11 +46,21 @@ export default function FormViewerPage() {
 
         setSubmitting(true);
         try {
+            // Get current user ID
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id;
+
+            if (!userId) {
+                alert('You must be logged in to submit forms');
+                setSubmitting(false);
+                return;
+            }
+
             const { error } = await createFormSubmission({
                 template_id: template.id,
                 data: formData,
                 status: 'submitted',
-                submitted_by: 'user-id-placeholder', // TODO: Get actual user ID
+                submitted_by: userId,
                 entity_type: 'test_submission'
             });
 

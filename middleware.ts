@@ -1,17 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// TEMPORARY: Authentication disabled while Supabase is in maintenance
-// Uncomment the code below when Supabase is back
 export async function middleware(request: NextRequest) {
-    // BYPASS ALL AUTH - TEMPORARY
-    return NextResponse.next({
-        request: {
-            headers: request.headers,
-        },
-    });
-
-    /* RESTORE THIS CODE WHEN SUPABASE IS BACK:
     let response = NextResponse.next({
         request: {
             headers: request.headers,
@@ -47,7 +37,7 @@ export async function middleware(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser();
 
-    // Auth protection logic
+    // Public paths that don't require authentication
     const publicPaths = ["/login", "/forgot-password", "/auth/callback", "/reset-password"];
     const isPublic = publicPaths.some((path) => request.nextUrl.pathname.startsWith(path));
     const isStaticAsset =
@@ -56,6 +46,7 @@ export async function middleware(request: NextRequest) {
         request.nextUrl.pathname === "/favicon.ico" ||
         request.nextUrl.pathname.match(/\.(?:svg|png|jpg|jpeg|gif|webp|ico)$/i);
 
+    // Redirect to login if not authenticated and not accessing public path
     if (!user && !isPublic && !isStaticAsset) {
         const redirectUrl = request.nextUrl.clone();
         redirectUrl.pathname = "/login";
@@ -65,8 +56,22 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(redirectUrl);
     }
 
+    // Redirect authenticated users from login page to dashboard
+    if (user && request.nextUrl.pathname === "/login") {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
+    // Redirect authenticated users from root to dashboard
+    if (user && request.nextUrl.pathname === "/") {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
+    // Redirect unauthenticated users from root to login
+    if (!user && request.nextUrl.pathname === "/") {
+        return NextResponse.redirect(new URL("/login", request.url));
+    }
+
     return response;
-    */
 }
 
 export const config = {
