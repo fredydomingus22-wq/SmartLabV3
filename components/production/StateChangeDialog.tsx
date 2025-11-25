@@ -110,7 +110,7 @@ export function StateChangeDialog({
                     <div className="space-y-2">
                         <Label htmlFor="status">New Status</Label>
                         <Select
-                            value={newStatus}
+                            value={newStatus || ''}
                             onValueChange={(val) => setNewStatus(val as IntermediateLot['status'])}
                         >
                             <SelectTrigger id="status" className="bg-slate-900 border-slate-800">
@@ -118,7 +118,7 @@ export function StateChangeDialog({
                             </SelectTrigger>
                             <SelectContent>
                                 {validNextStates.map((status) => (
-                                    <SelectItem key={status.value} value={status.value}>
+                                    <SelectItem key={status.value} value={String(status.value)}>
                                         {status.label}
                                     </SelectItem>
                                 ))}
