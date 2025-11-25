@@ -7,6 +7,8 @@ import { getCurrentUserProfile } from "@/lib/db-helpers";
 import { Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentRole } from "@/lib/auth/role";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 // Dashboards
 import { TechDashboard } from "./components/TechDashboard";
@@ -38,12 +40,9 @@ export default function DashboardPage() {
 
     useEffect(() => {
         loadDashboardData();
-
-        // Update time every minute
         const interval = setInterval(() => {
             setCurrentTime(new Date());
         }, 60000);
-
         return () => clearInterval(interval);
     }, []);
 
@@ -51,9 +50,8 @@ export default function DashboardPage() {
         try {
             const [metricsData, profileData] = await Promise.all([
                 getDashboardMetrics(),
-                getCurrentUserProfile()
+                getCurrentUserProfile(),
             ]);
-
             setMetrics(metricsData);
             setProfile(profileData);
         } catch (error) {
@@ -71,11 +69,11 @@ export default function DashboardPage() {
     };
 
     const formatTime = () => {
-        return currentTime.toLocaleDateString('pt-PT', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
+        return currentTime.toLocaleDateString("pt-PT", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
         });
     };
 
@@ -83,14 +81,13 @@ export default function DashboardPage() {
         if (loading && !role) {
             return <div className="p-10 text-center text-slate-500">Carregando perfil...</div>;
         }
-
         switch (role) {
-            case 'technician':
+            case "technician":
                 return <TechDashboard />;
-            case 'supervisor':
+            case "supervisor":
                 return <SupervisorDashboard />;
-            case 'manager':
-            case 'admin':
+            case "manager":
+            case "admin":
             default:
                 return <ManagerDashboard metrics={metrics} loading={loading} />;
         }
@@ -103,14 +100,13 @@ export default function DashboardPage() {
                 <div className="relative group">
                     {/* Glow Effect */}
                     <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
-
                     {/* Header Card */}
                     <div className="relative bg-white/[0.03] backdrop-blur-xl rounded-3xl border border-white/10 p-8 overflow-hidden">
                         {/* Decorative Elements */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-500/5 to-transparent rounded-full blur-3xl" />
                         <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-cyan-500/5 to-transparent rounded-full blur-3xl" />
-
-                        <div className="relative flex items-start justify-between">
+                        {/* Header Content */}
+                        <div className="flex items-start justify-between">
                             <div className="space-y-2">
                                 {/* Badge */}
                                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
@@ -119,7 +115,6 @@ export default function DashboardPage() {
                                         SmartLab Enterprise
                                     </span>
                                 </div>
-
                                 {/* Greeting */}
                                 <h1 className="text-4xl font-bold tracking-tight text-white">
                                     {getGreeting()},{" "}
@@ -127,37 +122,35 @@ export default function DashboardPage() {
                                         {loading ? (
                                             <Skeleton className="inline-block w-32 h-10" />
                                         ) : (
-                                            profile?.full_name?.split(' ')[0] || 'Utilizador'
+                                            profile?.full_name?.split(" ")[0] || "Utilizador"
                                         )}
                                     </span>
                                 </h1>
-
                                 {/* Subtitle */}
-                                <p className="text-slate-400 text-sm">
-                                    {formatTime()}
-                                </p>
+                                <p className="text-slate-400 text-sm">{formatTime()}</p>
                             </div>
-
-                            {/* Quick Stats Badge */}
-                            <div className="flex items-center gap-3">
-                                <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-                                    <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">
-                                        Status do Sistema
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                        <span className="text-sm font-semibold text-white">Operacional</span>
-                                    </div>
+                            {/* AI Assistant Link */}
+                            <Link href="/ai-assistant" className="ml-auto">
+                                <Button variant="ghost" size="sm">AI Assistant</Button>
+                            </Link>
+                        </div>
+                        {/* Quick Stats Badge */}
+                        <div className="flex items-center gap-3">
+                            <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+                                <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">
+                                    Status do Sistema
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                    <span className="text-sm font-semibold text-white">Operacional</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
                 {/* Role-Based Content */}
                 {renderDashboardContent()}
-
-                {/* Floating Action Button (for everyone for now, or filter inside component) */}
+                {/* Floating Action Button */}
                 <FloatingActionButton />
             </div>
         </AppShell>
