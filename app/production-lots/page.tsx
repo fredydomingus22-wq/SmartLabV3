@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export default function ProductionLotsPage() {
+function ProductionLotsContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const productIdFilter = searchParams.get("product");
@@ -416,5 +416,22 @@ export default function ProductionLotsPage() {
                 </AlertDialog>
             </div>
         </AppShell>
+    );
+}
+
+export default function ProductionLotsPage() {
+    return (
+        <Suspense fallback={
+            <AppShell>
+                <div className="p-6 flex justify-center items-center h-screen">
+                    <div className="text-center space-y-4">
+                        <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+                        <p className="text-muted-foreground">Carregando lotes de produção...</p>
+                    </div>
+                </div>
+            </AppShell>
+        }>
+            <ProductionLotsContent />
+        </Suspense>
     );
 }
