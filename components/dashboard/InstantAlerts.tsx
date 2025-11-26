@@ -60,6 +60,20 @@ export function InstantAlerts() {
                             </div>
                             <span className="text-xl font-bold text-sky-500">{data?.expiringTrainings ?? 0}</span>
                         </Link>
+                        <Link href="/equipment" className="flex items-center justify-between border-b border-slate-800 pb-3 last:border-0 last:pb-0 hover:bg-slate-800/50 p-2 rounded transition-colors">
+                            <div>
+                                <p className="text-sm font-medium text-white">Calibrações em atraso</p>
+                                <p className="text-xs text-muted-foreground">Equipamentos ativos</p>
+                            </div>
+                            <span className="text-xl font-bold text-orange-400">{data?.calibrationDue ?? 0}</span>
+                        </Link>
+                        <Link href="/food-safety/pcc" className="flex items-center justify-between hover:bg-slate-800/50 p-2 rounded transition-colors">
+                            <div>
+                                <p className="text-sm font-medium text-white">Desvios PCC</p>
+                                <p className="text-xs text-muted-foreground">Limites críticos ultrapassados</p>
+                            </div>
+                            <span className="text-xl font-bold text-red-500">{data?.pccBreaches ?? 0}</span>
+                        </Link>
                     </>
                 )}
             </CardContent>

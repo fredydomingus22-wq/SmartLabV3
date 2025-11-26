@@ -232,7 +232,15 @@ export async function getCapabilityMetrics() {
 /** Instant alerts (critical NCs, pending audits, expiring trainings) */
 export async function getInstantAlerts() {
     const supabase = getClient();
-    const [{ count: criticalNC }, { count: pendingAudits }, { count: expiringTrainings }] = await Promise.all([
+    const today = new Date().toISOString().split("T")[0];
+
+    const [
+        { count: criticalNC },
+        { count: pendingAudits },
+        { count: expiringTrainings },
+        { count: calibrationDue },
+        { count: pccBreaches },
+    ] = await Promise.all([
         supabase
             .from("nc")
             .select("id", { count: "exact", head: true })
@@ -244,11 +252,22 @@ export async function getInstantAlerts() {
         supabase
             .from("trainings")
             .select("id", { count: "exact", head: true }),
+        supabase
+            .from("equipment")
+            .select("id", { count: "exact", head: true })
+            .lte("calibration_due", today)
+            .eq("status", "active"),
+        supabase
+            .from("food_safety_pcc")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "breach"),
     ]);
     return {
         criticalNC: criticalNC ?? 0,
         pendingAudits: pendingAudits ?? 0,
         expiringTrainings: expiringTrainings ?? 0,
+        calibrationDue: calibrationDue ?? 0,
+        pccBreaches: pccBreaches ?? 0,
     };
 }
 
