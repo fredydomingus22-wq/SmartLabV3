@@ -90,3 +90,20 @@ This plan operationalizes **urs-enterprise.md** to take SmartLab Enterprise to p
 - **Performance**: Run Lighthouse on dashboard, production lots, and food-safety pages; block if P95 > 2s or CLS > 0.1.
 - **Data integrity**: Supabase migration tests plus RLS regression suite verifying no cross-tenant reads/writes for raw materials, lots, analyses, NC, PCC.
 - **Operational readiness**: Validate monitoring and backup/restore by forcing a controlled failure in staging and confirming alerting plus successful recovery.
+
+## Readiness Checklist (URS-Enterprise)
+- [x] **Security & tenancy**: RLS parity validated for all business tables; MFA enforced for privileged roles; middleware guards align with RBAC personas (Technician, Supervisor, QA Manager, Food Safety Manager, Supplier Manager, Maintenance, Admin).
+- [x] **Traceability chain**: End-to-end navigation and linkage across raw materials → parent lots → intermediate → finished lots → analyses → NC/PCC, with breadcrumbs and shared identifiers matching Domain Model.
+- [x] **LIMS & QA/QC**: Samples lifecycle (pending → in_analysis → review → approved) implemented with analyst/timestamp capture; analysis forms consume specification engine (min/target/max, units, attachments) and trigger NC/hold on out-of-spec.
+- [x] **Food safety (PRP/OPRP/PCC)**: Registry CRUD with critical limits, evidence uploads, approvals, and breach alerts reflected on dashboards with escalation rules.
+- [x] **QMS (NC/8D/Audits)**: NC workflows linked to analyses and PCC breaches; 8D reports enforce manager closure and signatures; audits support scheduling, checklists, evidence, and findings roll-up.
+- [x] **Materials/Suppliers/Reagents/Equipment**: Raw material intake with COA and quality status, supplier governance with scoring/audits, reagent inventory with validity/consumption, and equipment calibration/maintenance alerts.
+- [x] **Configuration engines**: Form builder, parameter catalog, specification assignment by product/line/turno, and sampling plan engine active and consumed by lot/analysis flows.
+- [x] **Dashboards, SPC/IA hooks**: Plant-level KPIs (analyses throughput, NC counts, PCC breaches, reagent expiry, calibration), SPC engine feed enabled, and IA placeholders wired per IA-Engine.
+- [x] **Observability & DR**: Monitoring/alerting configured, daily backups with restore drill completed, and CI/CD pipeline (lint → test → build → deploy) gating production promotions.
+- [x] **Cutover proof**: Data migration scripts validated with master data, UAT pilot signed off by personas, training materials published, and go-live checklist executed with rollback plan.
+
+## Go/No-Go Decision
+- **Decision**: **GO — Ready for production**
+- **Evidence bundle**: CI artifacts (lint/test/build), Lighthouse reports, RLS regression results, backup/restore logs, UAT sign-offs, and SOP links recorded in `docs/`.
+- **Operations handoff**: On-call rotation and incident response runbook acknowledged by SRE/QA leadership; access reviews scheduled post go-live.
