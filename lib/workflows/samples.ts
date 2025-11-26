@@ -1,100 +1,114 @@
+// Workflow logic for Sample entity
+// Handles analyst assignment and status transitions
+import { createClient } from "@/lib/supabase/client";
 import { SAMPLE_STATUS, type SampleStatus } from "@/lib/constants/status";
-import type { UserRole } from "@/lib/hooks/usePermissions";
+import type { Database } from "@/types/database";
 
-export type SampleWorkflowAction =
-    | "assign"
-    | "start_analysis"
-    | "submit_review"
-    | "approve"
-    | "reject";
+type SampleRow = Database["public"]["Tables"]["samples"]["Row"];
 
-interface TransitionResult {
-    allowed: boolean;
-    reason?: string;
+/** Assign an analyst (technician) to a sample */
+export async function assignAnalyst(sampleId: string, analystId: string) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("samples")
+        .update({ assigned_to: analystId })
+        .eq("id", sampleId)
+        .select()
+        .single();
+    if (error) throw error;
+    return data as SampleRow;
 }
 
-const roleCanStartAnalysis = (role: UserRole | null) =>
-    role === "technician" || role === "supervisor";
-
-const roleCanReview = (role: UserRole | null) =>
-    role === "manager" || role === "supervisor";
-
-const actionToStatusMap: Record<Exclude<SampleWorkflowAction, "assign">, SampleStatus> = {
-    start_analysis: SAMPLE_STATUS.IN_ANALYSIS,
-    submit_review: SAMPLE_STATUS.UNDER_REVIEW,
-    approve: SAMPLE_STATUS.APPROVED,
-    reject: SAMPLE_STATUS.REJECTED,
-};
-
-export function validateTransition(
-    currentStatus: SampleStatus,
-    nextStatus: SampleStatus,
-    userRole: UserRole | null
-): TransitionResult {
-    if (currentStatus === nextStatus) {
-        return { allowed: false, reason: "Status is already set to this value." };
+/** Transition sample status, ensuring it is a valid enum value */
+export async function transitionSampleStatus(sampleId: string, newStatus: keyof typeof SAMPLE_STATUS) {
+    if (!Object.values(SAMPLE_STATUS).includes(newStatus as any)) {
+        throw new Error(`Invalid status: ${newStatus}`);
     }
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("samples")
+        .update({ status: newStatus })
+        .eq("id", sampleId)
+        .select()
+        .single();
+    if (error) throw error;
+    return data as SampleRow;
+}
 
-    switch (currentStatus) {
+/** Fetch a sample by ID (helper) */
+export async function getSampleById(sampleId: string) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("samples")
+        .select(`*`)
+        .eq("id", sampleId)
+        .single();
+    if (error) throw error;
+    return data as SampleRow;
+}
+// Workflow helper functions for UI actions
+
+export type SampleWorkflowAction = "assign" | "start_analysis" | "submit_review" | "approve" | "reject";
+
+/** Determine allowed actions based on sample status and user role */
+export function getAllowedActions(status: SampleStatus, userRole: string | null): SampleWorkflowAction[] {
+    const actions: SampleWorkflowAction[] = [];
+    // Simple role check: only managers and technicians can assign
+    const canAssign = userRole === "manager" || userRole === "technician";
+    switch (status) {
         case SAMPLE_STATUS.PENDING:
-            if (nextStatus === SAMPLE_STATUS.IN_ANALYSIS && roleCanStartAnalysis(userRole)) {
-                return { allowed: true };
-            }
+            if (canAssign) actions.push("assign");
+            actions.push("start_analysis");
             break;
         case SAMPLE_STATUS.IN_ANALYSIS:
-            if (nextStatus === SAMPLE_STATUS.UNDER_REVIEW && roleCanStartAnalysis(userRole)) {
-                return { allowed: true };
-            }
+            actions.push("submit_review");
             break;
         case SAMPLE_STATUS.UNDER_REVIEW:
-            if (
-                (nextStatus === SAMPLE_STATUS.APPROVED || nextStatus === SAMPLE_STATUS.REJECTED) &&
-                roleCanReview(userRole)
-            ) {
-                return { allowed: true };
-            }
-            break;
-        case SAMPLE_STATUS.REJECTED:
-            if (nextStatus === SAMPLE_STATUS.IN_ANALYSIS && roleCanStartAnalysis(userRole)) {
-                return { allowed: true };
-            }
+            actions.push("approve", "reject");
             break;
         default:
+            // No actions for final states
             break;
     }
-
-    return { allowed: false, reason: "Transition not permitted for this role or status." };
-}
-
-export function getAllowedActions(
-    status: SampleStatus,
-    userRole: UserRole | null
-): SampleWorkflowAction[] {
-    const actions: SampleWorkflowAction[] = [];
-
-    if (status === SAMPLE_STATUS.PENDING) {
-        actions.push("assign");
-        if (roleCanStartAnalysis(userRole)) {
-            actions.push("start_analysis");
-        }
-    }
-
-    if (status === SAMPLE_STATUS.IN_ANALYSIS && roleCanStartAnalysis(userRole)) {
-        actions.push("submit_review");
-    }
-
-    if (status === SAMPLE_STATUS.UNDER_REVIEW && roleCanReview(userRole)) {
-        actions.push("approve", "reject");
-    }
-
-    if (status === SAMPLE_STATUS.REJECTED && roleCanStartAnalysis(userRole)) {
-        actions.push("start_analysis");
-    }
-
     return actions;
 }
 
+/** Map a workflow action to the resulting sample status */
 export function getNextStatusForAction(action: SampleWorkflowAction): SampleStatus | null {
-    if (action === "assign") return null;
-    return actionToStatusMap[action];
+    switch (action) {
+        case "start_analysis":
+            return SAMPLE_STATUS.IN_ANALYSIS;
+        case "submit_review":
+            return SAMPLE_STATUS.UNDER_REVIEW;
+        case "approve":
+            return SAMPLE_STATUS.APPROVED;
+        case "reject":
+            return SAMPLE_STATUS.REJECTED;
+        case "assign":
+            return null; // assignment does not change status
+        default:
+            return null;
+    }
+}
+
+/** Validate whether a transition from current to next status is allowed */
+export function validateTransition(current: SampleStatus, next: SampleStatus, userRole: string | null): { allowed: boolean; reason?: string } {
+    // Define allowed transitions
+    const allowedMap: Record<SampleStatus, SampleStatus[]> = {
+        [SAMPLE_STATUS.PENDING]: [SAMPLE_STATUS.IN_ANALYSIS],
+        [SAMPLE_STATUS.IN_ANALYSIS]: [SAMPLE_STATUS.UNDER_REVIEW],
+        [SAMPLE_STATUS.UNDER_REVIEW]: [SAMPLE_STATUS.APPROVED, SAMPLE_STATUS.REJECTED],
+        [SAMPLE_STATUS.APPROVED]: [],
+        [SAMPLE_STATUS.REJECTED]: [],
+    };
+
+    const allowedNext = allowedMap[current] || [];
+    if (!allowedNext.includes(next)) {
+        return { allowed: false, reason: `Transition from ${current} to ${next} is not permitted.` };
+    }
+    // Simple role restriction: only manager or technician can move to next status
+    if (userRole !== "manager" && userRole !== "technician") {
+        return { allowed: false, reason: "Insufficient permissions for status transition." };
+    }
+    return { allowed: true };
 }

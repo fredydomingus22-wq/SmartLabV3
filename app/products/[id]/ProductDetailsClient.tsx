@@ -50,7 +50,7 @@ import {
     Plus
 } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ProductDetailsClientProps {
     productId: string;
@@ -58,6 +58,7 @@ interface ProductDetailsClientProps {
 
 export default function ProductDetailsClient({ productId }: ProductDetailsClientProps) {
     const router = useRouter();
+    const { toast } = useToast();
     const [product, setProduct] = useState<ProductWithDetails | null>(null);
     const [stats, setStats] = useState<ProductQualitySummary | null>(null);
     const [loading, setLoading] = useState(true);
@@ -91,7 +92,11 @@ export default function ProductDetailsClient({ productId }: ProductDetailsClient
             setStats(statsData);
         } catch (error) {
             console.error("Error loading product:", error);
-            toast.error("Erro ao carregar produto");
+            toast({
+                title: "Erro",
+                description: "Erro ao carregar produto",
+                variant: "destructive",
+            });
         } finally {
             setLoading(false);
         }
@@ -111,13 +116,18 @@ export default function ProductDetailsClient({ productId }: ProductDetailsClient
 
         try {
             await updateProduct(productId, { active: !product.active });
-            toast.success(
-                product.active ? "Produto desativado" : "Produto ativado"
-            );
+            toast({
+                title: "Sucesso",
+                description: product.active ? "Produto desativado" : "Produto ativado",
+            });
             loadData();
         } catch (error) {
             console.error("Error toggling product:", error);
-            toast.error("Erro ao alterar estado");
+            toast({
+                title: "Erro",
+                description: "Erro ao alterar estado",
+                variant: "destructive",
+            });
         }
     };
 
@@ -125,11 +135,15 @@ export default function ProductDetailsClient({ productId }: ProductDetailsClient
     const handleCreateSpec = async (data: CreateProductSpecData) => {
         try {
             await createProductSpec(data);
-            toast.success("Especificação adicionada com sucesso!");
+            toast({
+                title: "Sucesso",
+                description: "Especificação adicionada com sucesso!",
+            });
             setShowSpecsForm(false);
             loadData();
         } catch (error) {
             console.error("Error creating spec:", error);
+            // Error is already logged, SpecsForm might show it too, but we want to be safe
             throw error;
         }
     };
@@ -139,7 +153,10 @@ export default function ProductDetailsClient({ productId }: ProductDetailsClient
 
         try {
             await updateProductSpec(editingSpec.id, data);
-            toast.success("Especificação atualizada com sucesso!");
+            toast({
+                title: "Sucesso",
+                description: "Especificação atualizada com sucesso!",
+            });
             setShowSpecsForm(false);
             setEditingSpec(null);
             loadData();
@@ -154,12 +171,19 @@ export default function ProductDetailsClient({ productId }: ProductDetailsClient
 
         try {
             await deleteProductSpec(deletingSpec.id);
-            toast.success("Especificação eliminada com sucesso!");
+            toast({
+                title: "Sucesso",
+                description: "Especificação eliminada com sucesso!",
+            });
             setDeletingSpec(null);
             loadData();
         } catch (error) {
             console.error("Error deleting spec:", error);
-            toast.error("Erro ao eliminar especificação");
+            toast({
+                title: "Erro",
+                description: "Erro ao eliminar especificação",
+                variant: "destructive",
+            });
         }
     };
 

@@ -13,6 +13,7 @@ import {
     getInstantAlerts,
     getShiftNotes,
     getAnalysisTotal,
+    getPendingSamples,
 } from "@/lib/queries/dashboard";
 
 /** Generic hook result shape */
@@ -279,6 +280,32 @@ export function useAnalysisTotal(period: "daily" | "weekly" | "monthly" = "daily
     useEffect(() => {
         fetch();
     }, [period]);
+
+    return { data, isLoading, error, refetch: fetch };
+}
+
+/** Pending samples for technician dashboard */
+export function usePendingSamples(limit: number = 10): HookResult<any[]> {
+    const [data, setData] = useState<any[] | null>(null);
+    const [isLoading, setLoading] = useState(true);
+    const [error, setError] = useState<Error | null>(null);
+
+    const fetch = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const result = await getPendingSamples(limit);
+            setData(result);
+        } catch (e: any) {
+            setError(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetch();
+    }, [limit]);
 
     return { data, isLoading, error, refetch: fetch };
 }

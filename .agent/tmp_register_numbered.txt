@@ -1,0 +1,518 @@
+   1: /**
+   2:  * Sample Registration Page  
+   3:  * 
+   4:  * Epic 2.1 - Register intermediate/finished product samples
+   5:  * Features:
+   6:  * - Auto-load product specs and parameters
+   7:  * - Generate unique sample codes: [ProductCode][4digitsLot]-[Tank]-[Seq]
+   8:  * - Phase selection (intermediate/finished)
+   9:  * - Tank selection with per-tank-per-day sequence
+  10:  */
+  11: 
+  12: 'use client';
+  13: 
+  14: import { useState, useEffect } from 'react';
+  15: import { AppShell } from '@/components/layout/AppShell';
+  16: import { SectionHeader } from '@/components/ui/SectionHeader';
+  17: import { Button } from '@/components/ui/button';
+  18: import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+  19: import { Input } from '@/components/ui/input';
+  20: import { Label } from '@/components/ui/label';
+  21: import {
+  22:     Select,
+  23:     SelectContent,
+  24:     SelectItem,
+  25:     SelectTrigger,
+  26:     SelectValue,
+  27: } from '@/components/ui/select';
+  28: import { Alert, AlertDescription } from '@/components/ui/alert';
+  29: import { Plus, Beaker, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
+  30: import { createClient } from '@/lib/supabase/client';
+  31: import { previewSampleCode } from '@/lib/utils/sample-code-generator';
+  32: import { usePermissions } from '@/lib/hooks/usePermissions';
+  33: import { toast } from 'sonner';
+  34: import { getRecentSamples, type SampleFilters } from '@/lib/queries/lab';
+  35: import { getActiveProductionLots } from '@/lib/queries/production';
+  36: import { SampleHistory } from './components/SampleHistory';
+  37: 
+  38: interface Product {
+  39:     id: string;
+  40:     name: string;
+  41:     sku: string;
+  42:     code: string;
+  43: }
+  44: 
+  45: interface ProductionLot {
+  46:     id: string;
+  47:     code: string;
+  48:     product_id: string;
+  49:     product?: Product;
+  50:     type?: 'production' | 'intermediate';
+  51: }
+  52: 
+  53: interface Tank {
+  54:     id: string;
+  55:     code: string;
+  56:     name: string;
+  57: }
+  58: 
+  59: interface Specification {
+  60:     id: string;
+  61:     product_id: string;
+  62:     phase: 'intermediate' | 'finished';
+  63:     parameter_count: number;
+  64: }
+  65: 
+  66: export default function SamplesRegistrationPage() {
+  67:     const { permissions, isLoading: permissionsLoading } = usePermissions();
+  68:     const [lots, setLots] = useState<ProductionLot[]>([]);
+  69:     const [tanks, setTanks] = useState<Tank[]>([]);
+  70:     const [loading, setLoading] = useState(true);
+  71:     const [submitting, setSubmitting] = useState(false);
+  72: 
+  73:     // Form state
+  74:     const [selectedLotId, setSelectedLotId] = useState('');
+  75:     const [phase, setPhase] = useState<'intermediate' | 'finished'>('intermediate');
+  76:     const [selectedTankId, setSelectedTankId] = useState('');
+  77:     const [observations, setObservations] = useState('');
+  78: 
+  79:     // Derived state
+  80:     const [sampleCodePreview, setSampleCodePreview] = useState('');
+  81:     const [specsInfo, setSpecsInfo] = useState<Specification | null>(null);
+  82:     const [specsLoading, setSpecsLoading] = useState(false);
+  83: 
+  84:     // History state
+  85:     const [recentSamples, setRecentSamples] = useState<any[]>([]);
+  86:     const [historyLoading, setHistoryLoading] = useState(false);
+  87:     const [filters, setFilters] = useState<SampleFilters>({ limit: 10 });
+  88: 
+  89:     const selectedLot = lots.find(lot => lot.id === selectedLotId);
+  90: 
+  91:     useEffect(() => {
+  92:         loadData();
+  93:         loadRecentSamples();
+  94:     }, []);
+  95: 
+  96:     // Load recent samples when filters change
+  97:     useEffect(() => {
+  98:         loadRecentSamples();
+  99:     }, [filters]);
+ 100: 
+ 101:     async function loadRecentSamples() {
+ 102:         setHistoryLoading(true);
+ 103:         try {
+ 104:             const data = await getRecentSamples(filters);
+ 105:             setRecentSamples(data || []);
+ 106:         } catch (error) {
+ 107:             console.error('Error loading history:', error);
+ 108:         } finally {
+ 109:             setHistoryLoading(false);
+ 110:         }
+ 111:     }
+ 112: 
+ 113:     // Auto-load specs when lot and phase are selected (Epic 2.1)
+ 114:     useEffect(() => {
+ 115:         if (selectedLot && phase) {
+ 116:             loadSpecifications();
+ 117:         } else {
+ 118:             setSpecsInfo(null);
+ 119:         }
+ 120:     }, [selectedLot, phase]);
+ 121: 
+ 122:     // Generate sample code preview
+ 123:     useEffect(() => {
+ 124:         if (selectedLot && selectedTankId) {
+ 125:             generateCodePreview();
+ 126:         } else {
+ 127:             setSampleCodePreview('');
+ 128:         }
+ 129:     }, [selectedLot, selectedTankId]);
+ 130: 
+ 131:     async function loadData() {
+ 132:         setLoading(true);
+ 133:         try {
+ 134:             const supabase = createClient();
+ 135: 
+ 136:             const [
+ 137:                 productionLotsData,
+ 138:                 { data: intermediateLotsData, error: intermediateLotsError },
+ 139:                 { data: tanksData, error: tanksError }
+ 140:             ] = await Promise.all([
+ 141:                 getActiveProductionLots(),
+ 142:                 supabase
+ 143:                     .from('intermediate_lots')
+ 144:                     .select(`
+ 145:                         id, 
+ 146:                         code, 
+ 147:                         production_lot:production_lots(
+ 148:                             product_id, 
+ 149:                             products(id, name, sku, code)
+ 150:                         )
+ 151:                     `)
+ 152:                     .eq('status', 'em_producao')
+ 153:                     .order('created_at', { ascending: false }),
+ 154:                 supabase
+ 155:                     .from('tanks')
+ 156:                     .select('id, code, name')
+ 157:                     .eq('active', true)
+ 158:                     .order('code')
+ 159:             ]);
+ 160: 
+ 161:             if (intermediateLotsError) throw intermediateLotsError;
+ 162:             if (tanksError) throw tanksError;
+ 163: 
+ 164:             const formattedProductionLots = productionLotsData?.map(lot => ({
+ 165:                 id: lot.id,
+ 166:                 code: lot.code,
+ 167:                 product_id: lot.product_id,
+ 168:                 product: lot.products as any,
+ 169:                 type: 'production' as const
+ 170:             })) || [];
+ 171: 
+ 172:             const formattedIntermediateLots = intermediateLotsData?.map(lot => ({
+ 173:                 id: lot.id,
+ 174:                 code: lot.code,
+ 175:                 product_id: lot.production_lot?.product_id,
+ 176:                 product: lot.production_lot?.products as any,
+ 177:                 type: 'intermediate' as const
+ 178:             })) || [];
+ 179: 
+ 180:             setLots([...formattedProductionLots, ...formattedIntermediateLots]);
+ 181: 
+ 182:             if (tanksData) {
+ 183:                 setTanks(tanksData);
+ 184:             }
+ 185:         } catch (error) {
+ 186:             console.error('Error loading data:', error);
+ 187:             toast.error('Erro ao carregar dados');
+ 188:         } finally {
+ 189:             setLoading(false);
+ 190:         }
+ 191:     }
+ 192: 
+ 193:     async function loadSpecifications() {
+ 194:         if (!selectedLot) return;
+ 195: 
+ 196:         setSpecsLoading(true);
+ 197:         try {
+ 198:             const supabase = createClient();
+ 199: 
+ 200:             const { data, error } = await supabase
+ 201:                 .from('specifications')
+ 202:                 .select('id, product_id, phase, parameters:parameters(count)')
+ 203:                 .eq('product_id', selectedLot.product_id)
+ 204:                 .eq('phase', phase)
+ 205:                 .eq('is_active', true)
+ 206:                 .single();
+ 207: 
+ 208:             if (error) {
+ 209:                 console.error('Specs error:', error);
+ 210:                 toast.warning(`Nenhuma especificação encontrada para ${phase === 'intermediate' ? 'produto intermédio' : 'produto acabado'}`);
+ 211:                 setSpecsInfo(null);
+ 212:                 return;
+ 213:             }
+ 214: 
+ 215:             if (data) {
+ 216:                 setSpecsInfo({
+ 217:                     ...data,
+ 218:                     parameter_count: (data.parameters as any)?.length || 0
+ 219:                 });
+ 220:                 toast.success(`Especificações carregadas: ${(data.parameters as any)?.length || 0} parâmetros`);
+ 221:             }
+ 222:         } catch (error) {
+ 223:             console.error('Error loading specs:', error);
+ 224:             toast.error('Erro ao carregar especificações');
+ 225:         } finally {
+ 226:             setSpecsLoading(false);
+ 227:         }
+ 228:     }
+ 229: 
+ 230:     async function generateCodePreview() {
+ 231:         if (!selectedLot?.product || !selectedLot.code || !selectedTankId) return;
+ 232: 
+ 233:         const productCode = selectedLot.product.code || selectedLot.product.sku?.substring(0, 3) || 'PRD';
+ 234:         const tank = tanks.find((t: Tank) => t.id === selectedTankId);
+ 235:         const tankCode = tank?.code || 'TK';
+ 236: 
+ 237:         const preview = previewSampleCode(
+ 238:             productCode,
+ 239:             selectedLot.code,
+ 240:             tankCode
+ 241:         );
+ 242: 
+ 243:         setSampleCodePreview(preview);
+ 244:     }
+ 245: 
+ 246:     async function handleSubmit(e: React.FormEvent) {
+ 247:         e.preventDefault();
+ 248: 
+ 249:         if (!selectedLotId || !selectedTankId || !phase) {
+ 250:             toast.error('Preencha todos os campos obrigatórios');
+ 251:             return;
+ 252:         }
+ 253: 
+ 254:         setSubmitting(true);
+ 255:         try {
+ 256:             const supabase = createClient();
+ 257: 
+ 258:             const { data: codeData, error: codeError } = await supabase
+ 259:                 .rpc('generate_sample_code', {
+ 260:                     p_product_id: selectedLot?.product_id,
+ 261:                     p_tank_id: selectedTankId,
+ 262:                     p_lot_code: selectedLot?.code,
+ 263:                 });
+ 264: 
+ 265:             if (codeError) throw codeError;
+ 266: 
+ 267:             const { data: sample, error: sampleError } = await supabase
+ 268:                 .from('samples')
+ 269:                 .insert({
+ 270:                     code: codeData.code,
+ 271:                     product_id: selectedLot?.product_id,
+ 272:                     tank_id: selectedTankId,
+ 273:                     phase,
+ 274:                     sequence_number: codeData.sequence,
+ 275:                     [phase === 'intermediate' ? 'intermediate_lot_id' : 'finished_lot_id']: selectedLotId,
+ 276:                     collection_date: new Date().toISOString(),
+ 277:                     status: 'pending_analysis',
+ 278:                     observations,
+ 279:                 })
+ 280:                 .select()
+ 281:                 .single();
+ 282: 
+ 283:             if (sampleError) throw sampleError;
+ 284: 
+ 285:             toast.success(`Amostra registada: ${codeData.code}`);
+ 286: 
+ 287:             setSelectedLotId('');
+ 288:             setSelectedTankId('');
+ 289:             setObservations('');
+ 290:             setSampleCodePreview('');
+ 291: 
+ 292:             loadData();
+ 293:             loadRecentSamples();
+ 294:         } catch (error) {
+ 295:             console.error('Error creating sample:', error);
+ 296:             toast.error('Erro ao registar amostra');
+ 297:         } finally {
+ 298:             setSubmitting(false);
+ 299:         }
+ 300:     }
+ 301: 
+ 302:     if (permissionsLoading || loading) {
+ 303:         return (
+ 304:             <AppShell>
+ 305:                 <div className="p-6 flex justify-center items-center h-screen">
+ 306:                     <div className="text-center space-y-4">
+ 307:                         <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+ 308:                         <p className="text-muted-foreground">A carregar...</p>
+ 309:                     </div>
+ 310:                 </div>
+ 311:             </AppShell>
+ 312:         );
+ 313:     }
+ 314: 
+ 315:     if (!permissions.canRegisterSample) {
+ 316:         return (
+ 317:             <AppShell>
+ 318:                 <div className="p-6">
+ 319:                     <Alert variant="destructive">
+ 320:                         <AlertCircle className="h-4 w-4" />
+ 321:                         <AlertDescription>
+ 322:                             Não tem permissão para registar amostras.
+ 323:                         </AlertDescription>
+ 324:                     </Alert>
+ 325:                 </div>
+ 326:             </AppShell>
+ 327:         );
+ 328:     }
+ 329: 
+ 330:     return (
+ 331:         <AppShell>
+ 332:             <div className="p-6 space-y-6">
+ 333:                 <SectionHeader
+ 334:                     title="Registro de Amostras"
+ 335:                     description="Registar novas amostras de produtos intermédios e acabados"
+ 336:                 />
+ 337: 
+ 338:                 <div className="grid gap-6 lg:grid-cols-3">
+ 339:                     {/* Form */}
+ 340:                     <Card className="lg:col-span-2">
+ 341:                         <CardHeader>
+ 342:                             <CardTitle className="flex items-center gap-2">
+ 343:                                 <Beaker className="h-5 w-5" />
+ 344:                                 Nova Amostra
+ 345:                             </CardTitle>
+ 346:                             <CardDescription>
+ 347:                                 Preencha os dados para registar uma nova amostra
+ 348:                             </CardDescription>
+ 349:                         </CardHeader>
+ 350:                         <CardContent>
+ 351:                             <form onSubmit={handleSubmit} className="space-y-4">
+ 352:                                 {/* Lot Selection */}
+ 353:                                 <div className="space-y-2">
+ 354:                                     <Label htmlFor="lot">Lote de Produção *</Label>
+ 355:                                     <Select value={selectedLotId} onValueChange={setSelectedLotId}>
+ 356:                                         <SelectTrigger id="lot">
+ 357:                                             <SelectValue placeholder="Selecione o lote" />
+ 358:                                         </SelectTrigger>
+ 359:                                         <SelectContent>
+ 360:                                             {lots
+ 361:                                                 .filter(lot => phase === 'intermediate' ? lot.type === 'intermediate' : lot.type === 'production')
+ 362:                                                 .map((lot) => (
+ 363:                                                     <SelectItem key={lot.id} value={lot.id}>
+ 364:                                                         {lot.code} - {lot.product?.name}
+ 365:                                                     </SelectItem>
+ 366:                                                 ))}
+ 367:                                         </SelectContent>
+ 368:                                     </Select>
+ 369:                                 </div>
+ 370: 
+ 371:                                 {/* Phase Selection */}
+ 372:                                 <div className="space-y-2">
+ 373:                                     <Label htmlFor="phase">Fase do Produto *</Label>
+ 374:                                     <Select
+ 375:                                         value={phase}
+ 376:                                         onValueChange={(value) => setPhase(value as 'intermediate' | 'finished')}
+ 377:                                     >
+ 378:                                         <SelectTrigger id="phase">
+ 379:                                             <SelectValue />
+ 380:                                         </SelectTrigger>
+ 381:                                         <SelectContent>
+ 382:                                             <SelectItem value="intermediate">Produto Intermédio</SelectItem>
+ 383:                                             <SelectItem value="finished">Produto Acabado</SelectItem>
+ 384:                                         </SelectContent>
+ 385:                                     </Select>
+ 386:                                 </div>
+ 387: 
+ 388:                                 {/* Tank Selection */}
+ 389:                                 <div className="space-y-2">
+ 390:                                     <Label htmlFor="tank">Tanque *</Label>
+ 391:                                     <Select value={selectedTankId} onValueChange={setSelectedTankId}>
+ 392:                                         <SelectTrigger id="tank">
+ 393:                                             <SelectValue placeholder="Selecione o tanque" />
+ 394:                                         </SelectTrigger>
+ 395:                                         <SelectContent>
+ 396:                                             {tanks.map((tank) => (
+ 397:                                                 <SelectItem key={tank.id} value={tank.id}>
+ 398:                                                     {tank.code} - {tank.name}
+ 399:                                                 </SelectItem>
+ 400:                                             ))}
+ 401:                                         </SelectContent>
+ 402:                                     </Select>
+ 403:                                 </div>
+ 404: 
+ 405:                                 {/* Sample Code Preview */}
+ 406:                                 {sampleCodePreview && (
+ 407:                                     <Alert>
+ 408:                                         <CheckCircle className="h-4 w-4" />
+ 409:                                         <AlertDescription>
+ 410:                                             <strong>Código da Amostra:</strong> {sampleCodePreview}
+ 411:                                         </AlertDescription>
+ 412:                                     </Alert>
+ 413:                                 )}
+ 414: 
+ 415:                                 {/* Observations */}
+ 416:                                 <div className="space-y-2">
+ 417:                                     <Label htmlFor="observations">Observações</Label>
+ 418:                                     <Input
+ 419:                                         id="observations"
+ 420:                                         placeholder="Observações adicionais..."
+ 421:                                         value={observations}
+ 422:                                         onChange={(e) => setObservations(e.target.value)}
+ 423:                                     />
+ 424:                                 </div>
+ 425: 
+ 426:                                 <Button type="submit" className="w-full" disabled={submitting}>
+ 427:                                     {submitting ? (
+ 428:                                         <>
+ 429:                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+ 430:                                             A registar...
+ 431:                                         </>
+ 432:                                     ) : (
+ 433:                                         <>
+ 434:                                             <Plus className="mr-2 h-4 w-4" />
+ 435:                                             Registar Amostra
+ 436:                                         </>
+ 437:                                     )}
+ 438:                                 </Button>
+ 439:                             </form>
+ 440:                         </CardContent>
+ 441:                     </Card>
+ 442: 
+ 443:                     {/* Specs Info Sidebar */}
+ 444:                     <div className="space-y-4">
+ 445:                         {/* Specifications Card */}
+ 446:                         <Card>
+ 447:                             <CardHeader>
+ 448:                                 <CardTitle className="text-base">Especificações</CardTitle>
+ 449:                             </CardHeader>
+ 450:                             <CardContent>
+ 451:                                 {specsLoading ? (
+ 452:                                     <div className="flex items-center justify-center py-8">
+ 453:                                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+ 454:                                     </div>
+ 455:                                 ) : specsInfo ? (
+ 456:                                     <div className="space-y-3">
+ 457:                                         <div className="flex items-center justify-between text-sm">
+ 458:                                             <span className="text-muted-foreground">Fase:</span>
+ 459:                                             <span className="font-medium">
+ 460:                                                 {specsInfo.phase === 'intermediate' ? 'Intermédio' : 'Acabado'}
+ 461:                                             </span>
+ 462:                                         </div>
+ 463:                                         <div className="flex items-center justify-between text-sm">
+ 464:                                             <span className="text-muted-foreground">Parâmetros:</span>
+ 465:                                             <span className="font-bold text-emerald-600">
+ 466:                                                 {specsInfo.parameter_count}
+ 467:                                             </span>
+ 468:                                         </div>
+ 469:                                         <Alert className="bg-emerald-500/10 border-emerald-500/50">
+ 470:                                             <CheckCircle className="h-4 w-4 text-emerald-600" />
+ 471:                                             <AlertDescription className="text-xs">
+ 472:                                                 Especificações carregadas automaticamente
+ 473:                                             </AlertDescription>
+ 474:                                         </Alert>
+ 475:                                     </div>
+ 476:                                 ) : (
+ 477:                                     <p className="text-sm text-muted-foreground text-center py-4">
+ 478:                                         Selecione um lote e fase para ver as especificações
+ 479:                                     </p>
+ 480:                                 )}
+ 481:                             </CardContent>
+ 482:                         </Card>
+ 483: 
+ 484:                         {/* Sample Code Info Card */}
+ 485:                         <Card>
+ 486:                             <CardHeader>
+ 487:                                 <CardTitle className="text-base">Código da Amostra</CardTitle>
+ 488:                             </CardHeader>
+ 489:                             <CardContent>
+ 490:                                 <div className="space-y-2 text-xs text-muted-foreground">
+ 491:                                     <p><strong>Formato:</strong></p>
+ 492:                                     <code className="block bg-slate-900 p-2 rounded text-emerald-400">
+ 493:                                         [ProductCode][4digitsLot]-[Tank]-[Seq]
+ 494:                                     </code>
+ 495:                                     <p className="pt-2"><strong>Exemplo:</strong></p>
+ 496:                                     <p>COK1234-TK01-003</p>
+ 497:                                     <p className="text-[10px]">
+ 498:                                         • COK = Código do produto<br />
+ 499:                                         • 1234 = Últimos 4 dígitos do lote<br />
+ 500:                                         • TK01 = Tanque<br />
+ 501:                                     </p>
+ 502:                                 </div>
+ 503:                             </CardContent>
+ 504:                         </Card>
+ 505:                     </div>
+ 506:                 </div>
+ 507: 
+ 508:                 {/* Sample History */}
+ 509:                 <SampleHistory
+ 510:                     samples={recentSamples}
+ 511:                     loading={historyLoading}
+ 512:                     onFilterChange={(newFilters) => setFilters(prev => ({ ...prev, ...newFilters }))}
+ 513:                     onRefresh={loadRecentSamples}
+ 514:                 />
+ 515:             </div>
+ 516:         </AppShell>
+ 517:     );
+ 518: }

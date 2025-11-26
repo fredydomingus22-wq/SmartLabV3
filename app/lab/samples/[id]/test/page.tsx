@@ -110,7 +110,7 @@ export default function ExecuteTestPage({ params }: { params: { id: string } }) 
 
             // 3. Update Sample Status
             // Logic: If successful, move to 'reviewed' (pending approval)
-            await updateSampleStatus(sample.id, 'reviewed');
+            await updateSampleStatus(sample.id, 'under_review');
 
             toast.success('Test results submitted successfully');
             router.push('/lab/samples');

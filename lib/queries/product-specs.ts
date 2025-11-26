@@ -162,6 +162,7 @@ export async function getCriticalSpecs(productId: string): Promise<ProductSpec[]
 export async function checkSpecExists(
     productId: string,
     parameterId: string,
+    testLevel?: string,
     excludeId?: string
 ): Promise<boolean> {
     let query = supabase
@@ -169,6 +170,13 @@ export async function checkSpecExists(
         .select('id')
         .eq('product_id', productId)
         .eq('parameter_id', parameterId);
+
+    if (testLevel) {
+        query = query.eq('test_level', testLevel);
+    } else {
+        // If no test level provided, check for specs with NULL test_level
+        query = query.is('test_level', null);
+    }
 
     if (excludeId) {
         query = query.neq('id', excludeId);

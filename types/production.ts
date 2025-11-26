@@ -6,21 +6,27 @@ export interface Product {
     created_at: string;
 }
 
+// Status type aligned with database constraints (Phase 2)
+export type ProductionLotStatus =
+    | 'draft'           // Aguardando ordem (was: aguardando_ordem)
+    | 'active'          // Em produção (was: em_producao)
+    | 'on_hold'         // Em espera (was: em_espera)
+    | 'completed'       // Concluído (was: concluido)
+    | 'cancelled';      // Cancelado (was: cancelado)
+
 export interface ProductionLot {
     id: string;
     code: string;
     product_id: string;
-    status: 'open' | 'closed' | 'blocked';
+    factory_id?: string | null;
+    production_line?: string | null;
+    shift?: string | null;
+    status: ProductionLotStatus;
+    created_by?: string | null;
     created_at: string;
-    // Optional fields
-    factory_id?: string;
-    line_id?: string;
-    production_line?: string;
-    shift?: string;
-    start_time?: string;
-    end_time?: string;
-    created_by?: string;
-    // Joined fields
+    closed_by?: string | null;
+    closed_at?: string | null;
+    closure_notes?: string | null;
     product?: Product;
 }
 
@@ -96,14 +102,20 @@ export interface IntermediateLot {
     production_lot_id: string;
     code: string;
     created_at: string;
-    tank?: string;
+    tank?: string | {
+        id: string;
+        name?: string;
+        code?: string;
+        capacity?: number;
+        status?: string;
+    };
     brix?: number;
     ph?: number;
     acidity?: number;
     ingredients?: Record<string, any>;
     prepared_at?: string;
-    // Lifecycle tracking fields
-    status?: 'em_producao' | 'terminado' | 'consumido';
+    // Lifecycle tracking fields - mixed English/Portuguese for transition
+    status?: 'active' | 'terminado' | 'consumido';
     started_at?: string;
     completed_at?: string;
     consumed_at?: string;

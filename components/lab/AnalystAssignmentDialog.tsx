@@ -18,7 +18,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Loader2, UserPlus } from "lucide-react";
-import { assignAnalyst, getTechnicians } from "@/lib/queries/samples";
+import { assignAnalyst } from "@/lib/workflows/samples";
+import { getTechnicians } from "@/lib/queries/samples";
 import { toast } from "sonner";
 
 interface AnalystAssignmentDialogProps {

@@ -1,21 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ParameterGroupCard } from "@/components/production/ParameterGroupCard";
 import { createClient } from "@/lib/supabase/client";
 import { IntermediateLot } from "@/types/production";
 import { ProductSpec } from "@/types/product";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 import { Save, ArrowLeft, FlaskConical } from "lucide-react";
 
 export default function RegisterAnalysisPage() {
     const params = useParams();
     const router = useRouter();
+    const { toast } = useToast();
+
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [lot, setLot] = useState<IntermediateLot | null>(null);
@@ -33,9 +34,8 @@ export default function RegisterAnalysisPage() {
         const supabase = createClient();
 
         try {
-            // 1. Fetch Lot Details
             const { data: lotData, error: lotError } = await supabase
-                .from('intermediate_lots')
+                .from("intermediate_lots")
                 .select(`
                     *,
                     production_lot:production_lots(
@@ -43,106 +43,112 @@ export default function RegisterAnalysisPage() {
                         product:products(*)
                     )
                 `)
-                .eq('id', lotId)
+                .eq("id", lotId)
                 .single();
 
             if (lotError) throw lotError;
             setLot(lotData);
 
-            // 2. Fetch Product Specs if product exists
             if (lotData?.production_lot?.product_id) {
                 const { data: specsData, error: specsError } = await supabase
-                    .from('product_specs')
+                    .from("product_specs")
                     .select(`
                         *,
                         parameter:parameters(*)
                     `)
-                    .eq('product_id', lotData.production_lot.product_id)
-                    .eq('test_level', 'in_process'); // Only in-process specs for intermediate lots
+                    .eq("product_id", lotData.production_lot.product_id)
+                    .eq("test_level", "in_process");
 
                 if (specsError) throw specsError;
                 setSpecs(specsData || []);
             }
-
         } catch (error) {
             console.error("Error loading analysis data:", error);
-            toast.error("Failed to load analysis data");
+            toast({ description: "Failed to load analysis data", variant: "destructive" });
         } finally {
             setLoading(false);
         }
     };
 
     const handleValueChange = (parameterId: string, value: number) => {
-        setValues(prev => ({
+        setValues((prev) => ({
             ...prev,
-            [parameterId]: value
+            [parameterId]: value,
         }));
+    };
+
+    const checkSpecStatus = (paramId: string, value: number) => {
+        const spec = specs.find((s) => s.parameter_id === paramId);
+        if (!spec) return "unknown";
+
+        const min = spec.spec_min ?? -Infinity;
+        const max = spec.spec_max ?? Infinity;
+
+        return value >= min && value <= max ? "in_spec" : "out_of_spec";
     };
 
     const handleSubmit = async () => {
         if (!lot) return;
+        if (!lot.production_lot?.product_id) {
+            toast({ description: "Product is missing for this lot", variant: "destructive" });
+            return;
+        }
+
         setSaving(true);
         const supabase = createClient();
 
         try {
-            // Create analysis record (simplified for now - assumes direct test creation)
-            // In a real scenario, we might create a 'lab_analysis' parent record first
-
             const { data: { user } } = await supabase.auth.getUser();
-            const userId = user?.id;
+            const userId = user?.id || null;
 
-            const testsToCreate = Object.entries(values).map(([paramId, value]) => ({
-                product_id: lot.production_lot?.product_id,
-                production_lot_id: lot.production_lot_id,
-                tank_id: lot.tank_id, // Assuming intermediate lot is tied to a tank/equipment
-                parameter_id: paramId,
-                measured_value: value,
-                test_level: 'in_process',
-                tested_at: new Date().toISOString(),
-                performed_by: userId,
-                result_status: checkSpecStatus(paramId, value)
-            }));
+            const testsToCreate = Object.entries(values).map(([paramId, value]) => {
+                const spec = specs.find((s) => s.parameter_id === paramId);
+
+                return {
+                    product_id: lot.production_lot!.product_id,
+                    production_lot_id: lot.production_lot_id,
+                    tank_id: lot.tank_id,
+                    parameter_id: paramId,
+                    measured_value: value,
+                    spec_min: spec?.spec_min ?? null,
+                    spec_target: spec?.spec_target ?? null,
+                    spec_max: spec?.spec_max ?? null,
+                    unit: spec?.unit ?? null,
+                    result_status: checkSpecStatus(paramId, value),
+                    test_level: "in_process",
+                    tested_at: new Date().toISOString(),
+                    tested_by: userId,
+                };
+            });
 
             if (testsToCreate.length === 0) {
-                toast.warning("No values recorded");
+                toast({ description: "No values recorded", variant: "destructive" });
                 setSaving(false);
                 return;
             }
 
-            const { error } = await supabase
-                .from('product_tests')
-                .insert(testsToCreate);
-
+            const { error } = await supabase.from("product_tests").insert(testsToCreate);
             if (error) throw error;
 
-            toast.success("Analysis registered successfully");
-            router.push('/intermediate-lots');
-
+            toast({ title: "Analysis registered", description: "Results saved to product tests" });
+            router.push("/intermediate-lots");
         } catch (error) {
             console.error("Error saving analysis:", error);
-            toast.error("Failed to save analysis");
+            const message = (error as any)?.message || "Failed to save analysis";
+            toast({ title: "Error", description: message, variant: "destructive" });
         } finally {
             setSaving(false);
         }
     };
 
-    const checkSpecStatus = (paramId: string, value: number) => {
-        const spec = specs.find(s => s.parameter_id === paramId);
-        if (!spec) return 'unknown';
-
-        const min = spec.spec_min ?? -Infinity;
-        const max = spec.spec_max ?? Infinity;
-
-        return (value >= min && value <= max) ? 'in_spec' : 'out_of_spec';
-    };
-
-    // Group specs by category
-    const groupedSpecs = specs.reduce((acc, spec) => {
-        const category = spec.parameter?.category || 'Other';
-        if (!acc[category]) acc[category] = [];
-        acc[category].push(spec);
-        return acc;
-    }, {} as Record<string, ProductSpec[]>);
+    const groupedSpecs = useMemo(() => {
+        return specs.reduce((acc, spec) => {
+            const category = spec.parameter?.category || "Other";
+            if (!acc[category]) acc[category] = [];
+            acc[category].push(spec);
+            return acc;
+        }, {} as Record<string, ProductSpec[]>);
+    }, [specs]);
 
     if (loading) {
         return (
@@ -179,7 +185,6 @@ export default function RegisterAnalysisPage() {
                 </div>
 
                 <div className="grid gap-6">
-                    {/* Header Card */}
                     <Card className="bg-slate-900 border-slate-800">
                         <CardContent className="pt-6 flex items-center gap-4">
                             <div className="p-3 bg-primary/10 rounded-full">
@@ -195,7 +200,6 @@ export default function RegisterAnalysisPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Parameter Groups */}
                     {Object.entries(groupedSpecs).map(([category, categorySpecs]) => (
                         <ParameterGroupCard
                             key={category}

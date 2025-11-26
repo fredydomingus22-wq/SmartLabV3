@@ -85,6 +85,7 @@ const sidebarGroups = [
         name: "Analytics",
         icon: LineChart,
         items: [
+            { name: "Advanced Analytics", href: "/analytics", icon: TrendingUp },
             { name: "SPC Engine", href: "/spc/dashboard", icon: LineChart },
             { name: "SPC War Room", href: "/spc/war-room", icon: Sparkles },
             { name: "Traceability", href: "/traceability", icon: GitBranch },

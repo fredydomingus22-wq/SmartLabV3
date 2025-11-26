@@ -5,17 +5,24 @@ import { AppShell } from "@/components/layout/AppShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getIntermediateLots, getProductionLots } from "@/lib/queries/production";
+import { getIntermediateLots, getIntermediateLotsByProductionLot, getProductionLots } from "@/lib/queries/production";
 import { IntermediateLot, ProductionLot } from "@/types/production";
 import { Plus, Beaker, Activity, Clock, Table2, LayoutGrid } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { IntermediateLotsDataTable } from "@/components/production/IntermediateLotsDataTable";
 import { columns } from "@/components/production/IntermediateLotsColumns";
 import { IntermediateLotCard } from "@/components/production/IntermediateLotCard";
 import { Badge } from "@/components/ui/badge";
 import { StateChangeDialog } from "@/components/production/StateChangeDialog";
 
-export default function IntermediateLotsPage() {
+import { Suspense } from "react";
+import { Loader2 } from "lucide-react";
+
+function IntermediateLotsContent() {
+    const searchParams = useSearchParams();
+    const lotFilter = searchParams.get('lot'); // production lot ID from URL
+
     const [lots, setLots] = useState<IntermediateLot[]>([]);
     const [productionLots, setProductionLots] = useState<ProductionLot[]>([]);
     const [loading, setLoading] = useState(true);
@@ -23,13 +30,13 @@ export default function IntermediateLotsPage() {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [lotFilter]);
 
     const loadData = async () => {
         try {
             setLoading(true);
             const [lotsData, prodLotsData] = await Promise.all([
-                getIntermediateLots(),
+                lotFilter ? getIntermediateLotsByProductionLot(lotFilter) : getIntermediateLots(),
                 getProductionLots()
             ]);
             setLots(lotsData);
@@ -57,17 +64,26 @@ export default function IntermediateLotsPage() {
     // Calculate stats
     const stats = {
         total: lots.length,
-        em_producao: lots.filter(l => l.status === 'em_producao').length,
+        em_producao: lots.filter(l => l.status === 'active').length,
         terminado: lots.filter(l => l.status === 'terminado').length,
         consumido: lots.filter(l => l.status === 'consumido').length,
     };
+
+    // Find selected production lot if filtering
+    const selectedProductionLot = lotFilter
+        ? productionLots.find(p => p.id === lotFilter)
+        : null;
 
     return (
         <AppShell>
             <div className="p-6 space-y-6">
                 <SectionHeader
-                    title="Intermediate Lots"
-                    description="Manage syrups, bases, and intermediate products"
+                    title={selectedProductionLot
+                        ? `Lotes Intermédios - ${selectedProductionLot.code}`
+                        : "Intermediate Lots"}
+                    description={selectedProductionLot
+                        ? `Filtrando por lote de produção: ${selectedProductionLot.product?.name || selectedProductionLot.code} (${lots.length} lotes)`
+                        : "Manage syrups, bases, and intermediate products"}
                     action={
                         <div className="flex gap-2">
                             <Link href="/intermediate-lots/analytics">
@@ -195,5 +211,17 @@ export default function IntermediateLotsPage() {
                 />
             </div>
         </AppShell>
+    );
+}
+
+export default function IntermediateLotsPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex h-screen items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        }>
+            <IntermediateLotsContent />
+        </Suspense>
     );
 }

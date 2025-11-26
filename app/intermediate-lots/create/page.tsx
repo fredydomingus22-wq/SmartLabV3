@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,24 +16,25 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
-import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, Beaker, Database, Scale } from "lucide-react";
-import { getProductionLots } from "@/lib/queries/production";
-import { getEquipment } from "@/lib/queries/equipment";
+import { useToast } from "@/components/ui/use-toast";
+import { ArrowLeft, ArrowRight, Check, Beaker, Database, Scale, Plus, MinusCircle } from "lucide-react";
+import { getActiveProductionLots } from "@/lib/queries/production";
+import { getMixingTanks, MixingTank } from "@/lib/queries/production-settings";
 import { getRawMaterials } from "@/lib/queries/inventory";
 import { ProductionLot } from "@/types/production";
-import { Equipment } from "@/types/equipment";
 import { RawMaterial } from "@/types/inventory";
+import { generateNextLotCode } from "@/lib/db-helpers";
 
 export default function CreateIntermediateLotPage() {
     const router = useRouter();
+    const { toast } = useToast();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [initializing, setInitializing] = useState(true);
 
     // Data
     const [productionLots, setProductionLots] = useState<ProductionLot[]>([]);
-    const [tanks, setTanks] = useState<Equipment[]>([]);
+    const [tanks, setTanks] = useState<MixingTank[]>([]);
     const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
 
     // Form State
@@ -52,20 +53,24 @@ export default function CreateIntermediateLotPage() {
 
     const loadData = async () => {
         try {
-            const [lotsData, equipmentData, materialsData] = await Promise.all([
-                getProductionLots(),
-                getEquipment(),
+            const [lotsData, tanksRes, materialsData] = await Promise.all([
+                getActiveProductionLots(),
+                getMixingTanks(),
                 getRawMaterials()
             ]);
 
-            // Filter active production lots
-            setProductionLots(lotsData.filter(l => l.status === 'open'));
-            // Filter tanks (assuming type 'tank' or similar, for now just all equipment)
-            setTanks(equipmentData);
+            // Filter production lots that are not encerrado/concluido/fechado
+            setProductionLots(lotsData);
+            // Filter only active mixing tanks
+            setTanks((tanksRes.data || []).filter(t => t.status === 'active'));
             setRawMaterials(materialsData);
         } catch (error) {
             console.error("Error loading data:", error);
-            toast.error("Failed to load form data");
+            toast({
+                title: "Error",
+                description: "Failed to load form data",
+                variant: "destructive",
+            });
         } finally {
             setInitializing(false);
         }
@@ -73,15 +78,27 @@ export default function CreateIntermediateLotPage() {
 
     const handleNext = () => {
         if (step === 1 && !formData.productionLotId) {
-            toast.error("Please select a production lot");
+            toast({
+                title: "Validation Error",
+                description: "Please select a production lot",
+                variant: "destructive",
+            });
             return;
         }
         if (step === 2 && !formData.tankId) {
-            toast.error("Please select a tank");
+            toast({
+                title: "Validation Error",
+                description: "Please select a tank",
+                variant: "destructive",
+            });
             return;
         }
         if (step === 3 && (!formData.quantity || parseFloat(formData.quantity) <= 0)) {
-            toast.error("Please enter a valid quantity");
+            toast({
+                title: "Validation Error",
+                description: "Please enter a valid quantity",
+                variant: "destructive",
+            });
             return;
         }
         setStep(step + 1);
@@ -114,34 +131,61 @@ export default function CreateIntermediateLotPage() {
         const supabase = createClient();
 
         try {
+            const code = await generateNextLotCode('intermediate');
+
             // 1. Create Intermediate Lot
+            const payload = {
+                code,
+                production_lot_id: formData.productionLotId,
+                tank_id: formData.tankId,
+                quantity: parseFloat(formData.quantity),
+                unit: formData.unit,
+                prepared_at: new Date(formData.startTime).toISOString(),
+                status: 'active'
+            };
+
             const { data: lot, error: lotError } = await supabase
                 .from('intermediate_lots')
-                .insert({
-                    production_lot_id: formData.productionLotId,
-                    tank_id: formData.tankId,
-                    quantity: parseFloat(formData.quantity),
-                    unit: formData.unit,
-                    started_at: new Date(formData.startTime).toISOString(),
-                    status: 'em_producao',
-                    // Store ingredients as JSON for now, ideally should be a separate table 'lot_ingredients'
-                    ingredients: formData.ingredients.map(ing => ({
-                        raw_material_id: ing.rawMaterialId,
-                        quantity: ing.quantity,
-                        name: rawMaterials.find(r => r.id === ing.rawMaterialId)?.name || 'Unknown'
-                    }))
-                })
+                .insert(payload)
                 .select()
                 .single();
 
             if (lotError) throw lotError;
 
-            toast.success("Intermediate lot created successfully");
+            // 2. Insert ingredients separately
+            if (formData.ingredients.length > 0) {
+                const ingredientsData = formData.ingredients.map(ing => ({
+                    intermediate_lot_id: lot.id,
+                    raw_material_id: ing.rawMaterialId,
+                    raw_material_name: rawMaterials.find(r => r.id === ing.rawMaterialId)?.name || 'Unknown',
+                    quantity_used: ing.quantity,
+                    unit: formData.unit
+                }));
+
+                const { error: ingredientsError } = await supabase
+                    .from('intermediate_lot_ingredients')
+                    .insert(ingredientsData);
+
+                if (ingredientsError) {
+                    console.error("Error creating ingredients:", ingredientsError);
+                    // Note: lot was created successfully, just log ingredient error
+                }
+            }
+
+            toast({
+                title: "Success",
+                description: "Intermediate lot created successfully",
+            });
+            router.refresh(); // Refresh server components/cache
             router.push('/intermediate-lots');
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error creating lot:", error);
-            toast.error("Failed to create intermediate lot");
+            toast({
+                title: "Error Creating Lot",
+                description: error.message || "Unknown error occurred",
+                variant: "destructive",
+            });
         } finally {
             setLoading(false);
         }
@@ -217,7 +261,7 @@ export default function CreateIntermediateLotPage() {
                                         </SelectContent>
                                     </Select>
                                     <p className="text-sm text-muted-foreground">
-                                        Only lots currently in "Em Produção" status are shown.
+                                        Only production lots that are not encerrado/fechado are shown.
                                     </p>
                                 </div>
                             </div>
@@ -379,5 +423,3 @@ export default function CreateIntermediateLotPage() {
         </AppShell>
     );
 }
-
-import { Plus, MinusCircle } from "lucide-react";

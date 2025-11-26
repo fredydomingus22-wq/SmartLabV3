@@ -1,10 +1,8 @@
-"use server";
-
 import { NextResponse } from "next/server";
-import { OpenAI } from "openai"; // Assuming openai npm package is installed
+import { OpenAI } from "openai";
 
-// Initialize OpenAI client – token should be stored in VERCEL_TOKEN secret
-const openai = new OpenAI({ apiKey: process.env.VERCEL_TOKEN });
+// Initialize OpenAI client – API key should be stored in OPENAI_API_KEY env variable
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "" });
 
 export async function POST(req: Request) {
     try {

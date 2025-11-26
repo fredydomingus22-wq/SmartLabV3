@@ -85,7 +85,7 @@ export default function ReviewSamplesPage() {
                                     <div className="space-y-1">
                                         <div className="flex items-center gap-2">
                                             <h3 className="font-bold text-lg">{sample.code}</h3>
-                                            <Badge variant="outline">{sample.type.replace("_", " ")}</Badge>
+                                            <Badge variant="outline">{sample.sample_type.replace("_", " ")}</Badge>
                                             {sample.priority === "urgent" && <Badge variant="destructive">Urgent</Badge>}
                                         </div>
                                         <div className="text-sm text-muted-foreground flex items-center gap-4">

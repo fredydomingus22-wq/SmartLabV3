@@ -10,7 +10,13 @@ export const productionLotSchema = z.object({
     factory_id: z.string().optional(),
     production_line: z.string().optional(),
     shift: z.string().optional(),
-    status: z.enum(["open", "closed", "blocked"]).default("open"),
+    status: z.enum([
+        "draft",
+        "on_hold",
+        "active",
+        "completed",
+        "cancelled"
+    ]).default("draft"),
 })
 
 export type ProductionLotFormValues = z.infer<typeof productionLotSchema>

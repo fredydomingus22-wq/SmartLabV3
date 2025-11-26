@@ -25,12 +25,17 @@ import {
     Users,
     Search,
     X,
-    Loader2
+    Loader2,
+    Edit2,
+    Lock,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CreateLotDialog } from "./components/CreateLotDialog";
+import { EditLotDialog } from "./components/EditLotDialog";
+import { CloseLotDialog } from "./components/CloseLotDialog";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 import { toast } from "sonner";
 import {
     AlertDialog,
@@ -55,6 +60,12 @@ function ProductionLotsContent() {
     const [showDialog, setShowDialog] = useState(false);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+
+    // Epic 1.2 & 1.3 - Edit and Close dialogs
+    const [showEditDialog, setShowEditDialog] = useState(false);
+    const [showCloseDialog, setShowCloseDialog] = useState(false);
+    const [selectedLot, setSelectedLot] = useState<ProductionLot | null>(null);
+    const { permissions, isLoading: permissionsLoading } = usePermissions();
 
     // Confirmation dialog state
     const [lotToClose, setLotToClose] = useState<string | null>(null);
@@ -108,7 +119,8 @@ function ProductionLotsContent() {
     const handleStatusChange = async (id: string, newStatus: ProductionLot["status"]) => {
         try {
             await updateProductionLotStatus(id, newStatus);
-            toast.success(`Lote ${newStatus === 'closed' ? 'fechado' : 'atualizado'} com sucesso!`);
+            const isClosed = newStatus === 'completed' || newStatus === 'cancelled';
+            toast.success(`Lote ${isClosed ? 'encerrado' : 'atualizado'} com sucesso!`);
             loadData();
         } catch (error) {
             console.error("Error updating status:", error);
@@ -122,7 +134,7 @@ function ProductionLotsContent() {
 
     const handleCloseLot = async () => {
         if (!lotToClose) return;
-        await handleStatusChange(lotToClose, "closed");
+        await handleStatusChange(lotToClose, "completed");
         setLotToClose(null);
     };
 
@@ -295,18 +307,18 @@ function ProductionLotsContent() {
                             className={`
                                 group relative bg-card p-5 rounded-lg border transition-all duration-200
                                 hover:shadow-lg hover:scale-[1.02] hover:border-primary/50
-                                ${lot.status === 'open' ? 'border-l-4 border-l-green-500' : ''}
+                                ${lot.status === 'active' ? 'border-l-4 border-l-green-500' : ''}
                             `}
                         >
                             <div className="flex items-start gap-3">
                                 <div className={`
                                     p-2.5 rounded-lg transition-all
-                                    ${lot.status === 'open'
+                                    ${lot.status === 'active'
                                         ? 'bg-green-500/10 group-hover:bg-green-500/20'
                                         : 'bg-primary/10 group-hover:bg-primary/20'
                                     }
                                 `}>
-                                    <Factory className={`h-5 w-5 ${lot.status === 'open' ? 'text-green-500' : 'text-primary'}`} />
+                                    <Factory className={`h-5 w-5 ${lot.status === 'active' ? 'text-green-500' : 'text-primary'}`} />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start mb-2">
@@ -345,14 +357,33 @@ function ProductionLotsContent() {
                                                 Formulários
                                             </Button>
                                         </Link>
-                                        {lot.status === "open" && (
+                                        {/* Epic 1.2 - Edit Button */}
+                                        {permissions.canEditLot && lot.status !== 'completed' && (
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                onClick={() => confirmCloseLot(lot.id)}
-                                                className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
+                                                onClick={() => {
+                                                    setSelectedLot(lot);
+                                                    setShowEditDialog(true);
+                                                }}
                                             >
-                                                Fechar
+                                                <Edit2 className="mr-1 h-3 w-3" />
+                                                Editar
+                                            </Button>
+                                        )}
+                                        {/* Epic 1.3 - Close Button */}
+                                        {permissions.canCloseLot && lot.status !== 'completed' && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setSelectedLot(lot);
+                                                    setShowCloseDialog(true);
+                                                }}
+                                                className="hover:bg-amber-50 hover:text-amber-600 hover:border-amber-500/50"
+                                            >
+                                                <Lock className="mr-1 h-3 w-3" />
+                                                Fechar Lote
                                             </Button>
                                         )}
                                     </div>
@@ -414,6 +445,38 @@ function ProductionLotsContent() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
+
+                {/* Epic 1.2 - Edit Lot Dialog */}
+                {selectedLot && (
+                    <EditLotDialog
+                        isOpen={showEditDialog}
+                        onClose={() => {
+                            setShowEditDialog(false);
+                            setSelectedLot(null);
+                        }}
+                        lot={selectedLot}
+                        onSuccess={() => {
+                            loadData();
+                            setSelectedLot(null);
+                        }}
+                    />
+                )}
+
+                {/* Epic 1.3 - Close Lot Dialog */}
+                {selectedLot && (
+                    <CloseLotDialog
+                        isOpen={showCloseDialog}
+                        onClose={() => {
+                            setShowCloseDialog(false);
+                            setSelectedLot(null);
+                        }}
+                        lot={selectedLot}
+                        onSuccess={() => {
+                            loadData();
+                            setSelectedLot(null);
+                        }}
+                    />
+                )}
             </div>
         </AppShell>
     );

@@ -117,7 +117,7 @@ export function IntermediateLotsDataTable<TData, TValue>({
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="em_producao">Em Produção</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
                             <SelectItem value="terminado">Terminado</SelectItem>
                             <SelectItem value="consumido">Consumido</SelectItem>
                         </SelectContent>
@@ -166,7 +166,7 @@ export function IntermediateLotsDataTable<TData, TValue>({
                             })}
                     </DropdownMenuContent>
                 </DropdownMenu>
-            </div>
+            </div >
             <div className="rounded-md border border-slate-800 bg-slate-900/50">
                 <Table>
                     <TableHeader>
@@ -241,6 +241,6 @@ export function IntermediateLotsDataTable<TData, TValue>({
                     </Button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

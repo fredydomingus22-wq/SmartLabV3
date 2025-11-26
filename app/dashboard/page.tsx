@@ -130,7 +130,7 @@ export default function DashboardPage() {
                                 <p className="text-slate-400 text-sm">{formatTime()}</p>
                             </div>
                             {/* AI Assistant Link */}
-                            <Link href="/ai-assistant" className="ml-auto">
+                            <Link href="/ai-assistant" className="ml-auto relative z-10">
                                 <Button variant="ghost" size="sm">AI Assistant</Button>
                             </Link>
                         </div>

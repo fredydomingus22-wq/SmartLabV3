@@ -144,18 +144,15 @@ export default function AuditLogPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="font-medium">
-                                                    {log.performer?.full_name || 'System'}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    {log.performer?.email}
+                                                    {log.performed_by || 'System'}
                                                 </div>
                                             </TableCell>
-                                            <TableCell>{getActionBadge(log.action)}</TableCell>
+                                            <TableCell>{getActionBadge(log.operation)}</TableCell>
                                             <TableCell>
-                                                <Badge variant="outline">{log.entity_type}</Badge>
+                                                <Badge variant="outline">{log.table_name}</Badge>
                                             </TableCell>
                                             <TableCell className="font-mono text-xs text-muted-foreground">
-                                                {log.entity_id ? log.entity_id.substring(0, 8) + '...' : '-'}
+                                                {log.row_id ? log.row_id.substring(0, 8) + '...' : '-'}
                                             </TableCell>
                                         </TableRow>
                                     ))

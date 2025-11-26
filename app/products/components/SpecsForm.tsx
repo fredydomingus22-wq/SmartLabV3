@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 import { Check, ChevronsUpDown, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +41,7 @@ interface SpecsFormProps {
 }
 
 export function SpecsForm({ productId, spec, onSubmit, onCancel }: SpecsFormProps) {
+    const { toast } = useToast();
     const isEditing = !!spec;
 
     const [parameters, setParameters] = useState<Parameter[]>([]);
@@ -77,7 +78,11 @@ export function SpecsForm({ productId, spec, onSubmit, onCancel }: SpecsFormProp
             setParameters(params);
         } catch (error) {
             console.error("Error loading parameters:", error);
-            toast.error("Erro ao carregar parâmetros");
+            toast({
+                title: "Erro",
+                description: "Erro ao carregar parâmetros",
+                variant: "destructive",
+            });
         } finally {
             setLoadingParams(false);
         }
@@ -109,20 +114,36 @@ export function SpecsForm({ productId, spec, onSubmit, onCancel }: SpecsFormProp
         e.preventDefault();
 
         if (!formData.parameter_id) {
-            toast.error("Selecione um parâmetro");
+            toast({
+                title: "Erro de Validação",
+                description: "Selecione um parâmetro",
+                variant: "destructive",
+            });
             return;
         }
 
         if (!validateLimits()) {
-            toast.error("Corrija os limites de especificação");
+            toast({
+                title: "Erro de Validação",
+                description: "Corrija os limites de especificação",
+                variant: "destructive",
+            });
             return;
         }
 
         // Check if spec already exists (only for new specs)
         if (!isEditing) {
-            const exists = await checkSpecExists(productId, formData.parameter_id);
+            const exists = await checkSpecExists(
+                productId,
+                formData.parameter_id,
+                formData.test_level
+            );
             if (exists) {
-                toast.error("Já existe uma especificação para este parâmetro");
+                toast({
+                    title: "Erro de Validação",
+                    description: "Já existe uma especificação para este parâmetro neste nível de teste",
+                    variant: "destructive",
+                });
                 return;
             }
         }
@@ -130,9 +151,14 @@ export function SpecsForm({ productId, spec, onSubmit, onCancel }: SpecsFormProp
         setLoading(true);
         try {
             await onSubmit(formData);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error submitting spec:", error);
-            throw error;
+            toast({
+                title: "Erro",
+                description: error.message || "Erro ao guardar especificação",
+                variant: "destructive",
+            });
+            // throw error; // Don't throw, we handled it
         } finally {
             setLoading(false);
         }

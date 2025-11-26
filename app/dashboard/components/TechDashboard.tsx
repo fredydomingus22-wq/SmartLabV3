@@ -6,7 +6,22 @@ import { Plus, ClipboardList, FlaskConical } from "lucide-react";
 import { tokens } from "@/components/ui/design-tokens";
 import Link from "next/link";
 
+import { usePendingSamples } from "@/lib/hooks/useDashboardData";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+
 export function TechDashboard() {
+    const { data: pendingSamples, isLoading } = usePendingSamples();
+
+    const isOverdue = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+        return diffInHours > 4;
+    };
+
     return (
         <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -32,34 +47,66 @@ export function TechDashboard() {
                 {/* My Active Tasks */}
                 <Card className="bg-slate-900 border-slate-800 col-span-2">
                     <CardHeader>
-                        <CardTitle className="text-lg font-medium text-slate-100">Minhas Tarefas Ativas</CardTitle>
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg font-medium text-slate-100">
+                                Amostras Pendentes
+                            </CardTitle>
+                            <Badge variant="secondary" className="bg-slate-800 text-slate-300">
+                                {isLoading ? "..." : pendingSamples?.length || 0} pendentes
+                            </Badge>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-                                <div className="flex items-center gap-3">
-                                    <ClipboardList className={`h-5 w-5 text-[${tokens.colors.amber}]`} />
-                                    <div>
-                                        <p className="text-sm font-medium text-slate-200">Análise de pH - Lote #12345</p>
-                                        <p className="text-xs text-slate-400">Pendente há 15 min</p>
+                            {isLoading ? (
+                                Array.from({ length: 3 }).map((_, i) => (
+                                    <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-4 w-48 bg-slate-700" />
+                                            <Skeleton className="h-3 w-32 bg-slate-700" />
+                                        </div>
+                                        <Skeleton className="h-8 w-20 bg-slate-700" />
                                     </div>
+                                ))
+                            ) : pendingSamples?.length === 0 ? (
+                                <div className="text-center py-8 text-slate-500">
+                                    <ClipboardList className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                                    <p>Nenhuma amostra pendente no momento.</p>
                                 </div>
-                                <Link href="/lab/samples">
-                                    <Button size="sm" variant="ghost">Iniciar</Button>
-                                </Link>
-                            </div>
-                            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-                                <div className="flex items-center gap-3">
-                                    <FlaskConical className={`h-5 w-5 text-[${tokens.colors.sky}]`} />
-                                    <div>
-                                        <p className="text-sm font-medium text-slate-200">Coleta de Amostra - Tanque A</p>
-                                        <p className="text-xs text-slate-400">Agendado para 14:00</p>
-                                    </div>
-                                </div>
-                                <Link href="/lab/samples/register">
-                                    <Button size="sm" variant="ghost">Iniciar</Button>
-                                </Link>
-                            </div>
+                            ) : (
+                                pendingSamples?.map((sample) => {
+                                    const overdue = isOverdue(sample.collectedAt);
+                                    return (
+                                        <div key={sample.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700 hover:border-slate-600 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <FlaskConical className={`h-5 w-5 ${overdue ? "text-red-400" : `text-[${tokens.colors.amber}]`}`} />
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-medium text-slate-200">
+                                                            {sample.code} - {sample.productName}
+                                                        </p>
+                                                        {overdue && (
+                                                            <Badge variant="destructive" className="h-5 text-[10px] px-1.5">
+                                                                Atrasado
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-slate-400">
+                                                        Coletado {formatDistanceToNow(new Date(sample.collectedAt), { addSuffix: true, locale: ptBR })}
+                                                        {' • '}
+                                                        Tanque: {sample.tankCode}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <Link href={`/lab/analysis/${sample.id}`}>
+                                                <Button size="sm" variant={overdue ? "destructive" : "secondary"}>
+                                                    Analisar
+                                                </Button>
+                                            </Link>
+                                        </div>
+                                    );
+                                })
+                            )}
                         </div>
                     </CardContent>
                 </Card>

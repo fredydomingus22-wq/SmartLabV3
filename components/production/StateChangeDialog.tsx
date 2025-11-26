@@ -42,14 +42,14 @@ export function StateChangeDialog({
     if (!lot) return null;
 
     const availableStatuses: { value: IntermediateLot['status']; label: string }[] = [
-        { value: 'em_producao', label: 'Em Produção' },
+        { value: 'active', label: 'Active' },
         { value: 'terminado', label: 'Terminado' },
         { value: 'consumido', label: 'Consumido' },
     ];
 
     // Filter valid next states
     const validNextStates = availableStatuses.filter(s => {
-        if (lot.status === 'em_producao') return s.value === 'terminado';
+        if (lot.status === 'active') return s.value === 'terminado';
         if (lot.status === 'terminado') return s.value === 'consumido';
         return false;
     });
@@ -63,10 +63,8 @@ export function StateChangeDialog({
             const updates: any = { status: newStatus };
             const now = new Date().toISOString();
 
-            if (newStatus === 'terminado') {
-                updates.completed_at = now;
-            } else if (newStatus === 'consumido') {
-                updates.consumed_at = now;
+            if (newStatus === 'terminado' && !lot.prepared_at) {
+                updates.prepared_at = now;
             }
 
             const { error } = await supabase

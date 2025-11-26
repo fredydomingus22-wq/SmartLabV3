@@ -53,6 +53,9 @@ export async function getProductById(id: string): Promise<Product | null> {
     return data as Product;
 }
 
+// Alias for cleaner imports
+export const getProduct = getProductById;
+
 export async function getProductWithSpecs(id: string): Promise<ProductWithDetails | null> {
     const { data: product, error: productError } = await supabase
         .from('products')

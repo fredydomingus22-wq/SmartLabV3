@@ -46,6 +46,26 @@ export async function getProductionLots() {
     return data as ProductionLot[];
 }
 
+export async function getActiveProductionLots() {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("production_lots")
+        .select(`
+            *,
+            product:products(*)
+        `)
+        .in("status", ["draft", "on_hold", "active"])
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching active production lots:", error);
+        throw error;
+    }
+
+    console.log("Active production lots fetched:", data?.length || 0, "lots");
+    return data as ProductionLot[];
+}
+
 export async function createProductionLot(lot: Omit<ProductionLot, "id" | "created_at" | "product">) {
     const supabase = createClient();
     const { data, error } = await supabase
@@ -104,15 +124,18 @@ export async function getProductionLotsStats(): Promise<ProductionLotsStats> {
 
     // Calculate stats
     const totalLots = lots?.length || 0;
-    const activeLots = lots?.filter(lot => lot.status === 'open').length || 0;
+    const activeStatuses = ['active', 'on_hold', 'draft'];
+    const closedStatuses = ['encerrado', 'concluido', 'closed', 'fechado'];
+
+    const activeLots = lots?.filter(lot => activeStatuses.includes(lot.status)).length || 0;
     const completedToday = lots?.filter(lot => {
-        if (lot.status !== 'closed' || !lot.updated_at) return false;
+        if (!closedStatuses.includes(lot.status) || !lot.updated_at) return false;
         const updatedDate = new Date(lot.updated_at);
         return updatedDate >= todayStart;
     }).length || 0;
 
     // Calculate average duration for closed lots
-    const closedLots = lots?.filter(lot => lot.status === 'closed' && lot.updated_at) || [];
+    const closedLots = lots?.filter(lot => closedStatuses.includes(lot.status) && lot.updated_at) || [];
     let avgDurationHours: number | null = null;
 
     if (closedLots.length > 0) {
@@ -426,16 +449,121 @@ export async function getLineAnalysesBySample(sampleId: string) {
     return data as LineAnalysis[];
 }
 
+
+// ============================================================================
+// INTERMEDIATE LOTS (NEW - PROPER IMPLEMENTATION)
+// ============================================================================
+
+export async function getIntermediateLots() {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("intermediate_lots")
+        .select(`
+            *,
+            production_lot:production_lots(
+                *,
+                product:products(*)
+            ),
+            tank:mixing_tanks(
+                id,
+                name,
+                code,
+                capacity,
+                status
+            ),
+            ingredients:intermediate_lot_ingredients(*)
+        `)
+        .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data as IntermediateLot[];
+}
+
+export async function getIntermediateLotsByProductionLot(lotId: string, status?: string) {
+    const supabase = createClient();
+    let query = supabase
+        .from("intermediate_lots")
+        .select(`
+            *,
+            production_lot:production_lots(*),
+            tank:mixing_tanks(
+                id,
+                name,
+                code,
+                capacity,
+                status
+            ),
+            ingredients:intermediate_lot_ingredients(*)
+        `)
+        .eq("production_lot_id", lotId);
+
+    if (status) {
+        query = query.eq("status", status);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data as IntermediateLot[];
+}
+
+// ============================================================================
+// INTERMEDIATE LOT INGREDIENTS MANAGEMENT
+// ============================================================================
+
+export interface IntermediateLotIngredient {
+    id: string;
+    intermediate_lot_id: string;
+    raw_material_id?: string;
+    raw_material_name: string;
+    lot_number?: string;
+    expiry_date?: string;
+    quantity_used: number;
+    unit: string;
+    added_at: string;
+    added_by?: string;
+    notes?: string;
+}
+
+export async function addIntermediateLotIngredient(ingredient: Omit<IntermediateLotIngredient, 'id' | 'added_at'>) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("intermediate_lot_ingredients")
+        .insert(ingredient)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as IntermediateLotIngredient;
+}
+
+export async function deleteIntermediateLotIngredient(id: string) {
+    const supabase = createClient();
+    const { error } = await supabase
+        .from("intermediate_lot_ingredients")
+        .delete()
+        .eq("id", id);
+
+    if (error) throw error;
+}
+
+export async function getIntermediateLotIngredients(lotId: string) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("intermediate_lot_ingredients")
+        .select("*")
+        .eq("intermediate_lot_id", lotId)
+        .order("added_at", { ascending: true });
+
+    if (error) throw error;
+    return data as IntermediateLotIngredient[];
+}
+
 // ============================================================================
 // DEPRECATED - BACKWARD COMPATIBILITY
 // ============================================================================
 
-/** @deprecated Use getTanks() instead */
-export async function getIntermediateLots() {
-    return getTanks() as Promise<any[]>;
-}
-
-/** @deprecated Use createTank() instead */
+/** @deprecated Use getIntermediateLots() instead */
 export async function createIntermediateLot(lot: any) {
     return createTank(lot) as Promise<any>;
 }

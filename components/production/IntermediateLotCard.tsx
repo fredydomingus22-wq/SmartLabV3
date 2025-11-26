@@ -23,11 +23,11 @@ interface IntermediateLotCardProps {
 
 const getStatusConfig = (status?: string) => {
     const configs: Record<string, { label: string; className: string }> = {
-        em_producao: { label: "Em Produção", className: "bg-green-500/10 text-green-500 border-green-500" },
+        active: { label: "Active", className: "bg-green-500/10 text-green-500 border-green-500" },
         terminado: { label: "Terminado", className: "bg-blue-500/10 text-blue-500 border-blue-500" },
         consumido: { label: "Consumido", className: "bg-gray-500/10 text-gray-500 border-gray-500" },
     };
-    return configs[status || 'em_producao'] || configs.em_producao;
+    return configs[status || 'active'] || configs.active;
 };
 
 const LifecyclePanel = ({ lot }: { lot: IntermediateLot }) => {
@@ -37,8 +37,12 @@ const LifecyclePanel = ({ lot }: { lot: IntermediateLot }) => {
         return `${hours}h`;
     };
 
-    const productionDuration = calculateDuration(lot.started_at, lot.completed_at);
-    const storageDuration = calculateDuration(lot.completed_at, lot.consumed_at);
+    const startedAt = lot.started_at || lot.prepared_at || lot.created_at;
+    const completedAt = lot.completed_at || (lot.status === 'terminado' ? lot.prepared_at : undefined);
+    const consumedAt = lot.consumed_at;
+
+    const productionDuration = calculateDuration(startedAt, completedAt);
+    const storageDuration = calculateDuration(completedAt, consumedAt);
 
     return (
         <div className="space-y-3 p-3 bg-slate-800/50 rounded-lg">
@@ -47,10 +51,10 @@ const LifecyclePanel = ({ lot }: { lot: IntermediateLot }) => {
             <div className="space-y-2">
                 {/* Started */}
                 <div className="flex items-center gap-2 text-xs">
-                    <Play className={`h-3 w-3 ${lot.started_at ? 'text-green-500' : 'text-gray-600'}`} />
+                    <Play className={`h-3 w-3 ${startedAt ? 'text-green-500' : 'text-gray-600'}`} />
                     <span className="text-muted-foreground min-w-[80px]">Iniciado:</span>
-                    {lot.started_at ? (
-                        <span className="font-mono">{new Date(lot.started_at).toLocaleString()}</span>
+                    {startedAt ? (
+                        <span className="font-mono">{new Date(startedAt).toLocaleString()}</span>
                     ) : (
                         <span className="text-gray-600">-</span>
                     )}
@@ -58,10 +62,10 @@ const LifecyclePanel = ({ lot }: { lot: IntermediateLot }) => {
 
                 {/* Completed */}
                 <div className="flex items-center gap-2 text-xs">
-                    <CheckCircle className={`h-3 w-3 ${lot.completed_at ? 'text-blue-500' : 'text-gray-600'}`} />
+                    <CheckCircle className={`h-3 w-3 ${completedAt ? 'text-blue-500' : 'text-gray-600'}`} />
                     <span className="text-muted-foreground min-w-[80px]">Terminado:</span>
-                    {lot.completed_at ? (
-                        <span className="font-mono">{new Date(lot.completed_at).toLocaleString()}</span>
+                    {completedAt ? (
+                        <span className="font-mono">{new Date(completedAt).toLocaleString()}</span>
                     ) : (
                         <span className="text-gray-600">-</span>
                     )}
@@ -69,10 +73,10 @@ const LifecyclePanel = ({ lot }: { lot: IntermediateLot }) => {
 
                 {/* Consumed */}
                 <div className="flex items-center gap-2 text-xs">
-                    <Clock className={`h-3 w-3 ${lot.consumed_at ? 'text-purple-500' : 'text-gray-600'}`} />
+                    <Clock className={`h-3 w-3 ${consumedAt ? 'text-purple-500' : 'text-gray-600'}`} />
                     <span className="text-muted-foreground min-w-[80px]">Consumido:</span>
-                    {lot.consumed_at ? (
-                        <span className="font-mono">{new Date(lot.consumed_at).toLocaleString()}</span>
+                    {consumedAt ? (
+                        <span className="font-mono">{new Date(consumedAt).toLocaleString()}</span>
                     ) : (
                         <span className="text-gray-600">-</span>
                     )}
@@ -108,7 +112,10 @@ const LifecyclePanel = ({ lot }: { lot: IntermediateLot }) => {
 
 export function IntermediateLotCard({ lot, onChangeState }: IntermediateLotCardProps) {
     const statusConfig = getStatusConfig(lot.status);
-    const canRegisterAnalysis = lot.status === 'em_producao';
+    const canRegisterAnalysis = lot.status === 'active';
+    const tankLabel = typeof lot.tank === 'string'
+        ? lot.tank
+        : lot.tank?.code || lot.tank?.name;
 
     return (
         <Card className={`bg-slate-900 border-slate-800 hover:border-primary/50 transition-all`}>
@@ -120,9 +127,9 @@ export function IntermediateLotCard({ lot, onChangeState }: IntermediateLotCardP
                         </div>
                         <div>
                             <h3 className="font-semibold font-mono">{lot.code}</h3>
-                            {lot.tank && (
+                            {tankLabel && (
                                 <Badge variant="outline" className="mt-1 font-mono text-xs">
-                                    {lot.tank}
+                                    {tankLabel}
                                 </Badge>
                             )}
                         </div>

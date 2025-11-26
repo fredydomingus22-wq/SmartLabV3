@@ -52,7 +52,7 @@ export function CreateLotDialog({
             factory_id: "",
             production_line: "",
             shift: "",
-            status: "open",
+            status: "draft", // Draft status per Phase 2 standardization
         },
     });
 
@@ -65,7 +65,7 @@ export function CreateLotDialog({
                 factory_id: "",
                 production_line: "",
                 shift: "",
-                status: "open",
+                status: "draft",
             });
         }
     }, [open, preSelectedProductId, form]);
@@ -266,6 +266,36 @@ export function CreateLotDialog({
                                     )}
                                 />
                             </div>
+
+                            <div className="md:col-span-2">
+                                <FormField
+                                    control={form.control}
+                                    name="status"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Estado Inicial *</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Selecione o estado inicial" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="draft">Draft</SelectItem>
+                                                    <SelectItem value="on_hold">On Hold</SelectItem>
+                                                    <SelectItem value="active">Active</SelectItem>
+                                                    <SelectItem value="completed">Completed</SelectItem>
+                                                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Define o estado inicial do lote. Pode ser alterado posteriormente.
+                                            </p>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
                         </div>
 
                         <div className="flex gap-2 pt-4">
@@ -294,4 +324,3 @@ export function CreateLotDialog({
         </Dialog>
     );
 }
-

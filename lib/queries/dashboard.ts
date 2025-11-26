@@ -285,3 +285,36 @@ export async function getAnalysisTotal(period: "daily" | "weekly" | "monthly" = 
         .gte("analysis_date", start.toISOString());
     return count ?? 0;
 }
+
+/**
+ * Get pending samples for the technician dashboard
+ */
+export async function getPendingSamples(limit: number = 10) {
+    const supabase = getClient();
+
+    const { data, error } = await supabase
+        .from("samples")
+        .select(`
+            id,
+            code,
+            status,
+            collection_date,
+            product:products(name, sku),
+            tank:tanks(code)
+        `)
+        .eq("status", "pending_analysis")
+        .order("collection_date", { ascending: true })
+        .limit(limit);
+
+    if (error) throw error;
+
+    return data?.map((sample: any) => ({
+        id: sample.id,
+        code: sample.code,
+        productName: sample.product?.name || "Unknown Product",
+        tankCode: sample.tank?.code || "N/A",
+        collectedAt: sample.collection_date,
+        status: sample.status
+    })) ?? [];
+}
+

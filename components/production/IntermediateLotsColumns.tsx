@@ -18,34 +18,38 @@ import { formatDistanceToNow } from "date-fns";
 
 const getStatusBadge = (status: string) => {
     const variants: Record<string, { label: string; className: string }> = {
-        em_producao: { label: "Em Produção", className: "bg-green-500/10 text-green-500 border-green-500/50" },
+        active: { label: "Active", className: "bg-green-500/10 text-green-500 border-green-500/50" },
         terminado: { label: "Terminado", className: "bg-blue-500/10 text-blue-500 border-blue-500/50" },
         consumido: { label: "Consumido", className: "bg-gray-500/10 text-gray-500 border-gray-500/50" },
     };
-    const variant = variants[status] || variants.em_producao;
+    const variant = variants[status] || variants.active;
     return <Badge className={variant.className}>{variant.label}</Badge>;
 };
 
 const LifecycleTimeline = ({ lot }: { lot: IntermediateLot }) => {
-    const hasStarted = !!lot.started_at;
-    const hasCompleted = !!lot.completed_at;
-    const hasConsumed = !!lot.consumed_at;
+    const startedAt = lot.started_at || lot.prepared_at || lot.created_at;
+    const completedAt = lot.completed_at || (lot.status === 'terminado' ? lot.prepared_at : undefined);
+    const consumedAt = lot.consumed_at;
+
+    const hasStarted = !!startedAt;
+    const hasCompleted = !!completedAt;
+    const hasConsumed = !!consumedAt;
 
     return (
         <div className="flex items-center gap-1 text-xs">
             <div className={`flex items-center gap-1 ${hasStarted ? 'text-green-500' : 'text-gray-600'}`}>
                 <Play className="h-3 w-3" />
-                {hasStarted && <span>{new Date(lot.started_at!).toLocaleDateString()}</span>}
+                {hasStarted && <span>{new Date(startedAt!).toLocaleDateString()}</span>}
             </div>
             <div className="w-8 h-0.5 bg-gray-700" />
             <div className={`flex items-center gap-1 ${hasCompleted ? 'text-blue-500' : 'text-gray-600'}`}>
                 <CheckCircle className="h-3 w-3" />
-                {hasCompleted && <span>{new Date(lot.completed_at!).toLocaleDateString()}</span>}
+                {hasCompleted && <span>{new Date(completedAt!).toLocaleDateString()}</span>}
             </div>
             <div className="w-8 h-0.5 bg-gray-700" />
             <div className={`flex items-center gap-1 ${hasConsumed ? 'text-purple-500' : 'text-gray-600'}`}>
                 <Clock className="h-3 w-3" />
-                {hasConsumed && <span>{new Date(lot.consumed_at!).toLocaleDateString()}</span>}
+                {hasConsumed && <span>{new Date(consumedAt!).toLocaleDateString()}</span>}
             </div>
         </div>
     );
@@ -71,9 +75,13 @@ export const columns: ColumnDef<IntermediateLot>[] = [
         accessorKey: "tank",
         header: "Tank",
         cell: ({ row }) => {
-            const tank = row.getValue("tank") as string;
-            return tank ? (
-                <Badge variant="outline" className="font-mono">{tank}</Badge>
+            const tank = row.original.tank;
+            const label = typeof tank === 'string'
+                ? tank
+                : tank?.code || tank?.name || '';
+
+            return label ? (
+                <Badge variant="outline" className="font-mono">{label}</Badge>
             ) : (
                 <span className="text-muted-foreground">-</span>
             );
@@ -137,7 +145,7 @@ export const columns: ColumnDef<IntermediateLot>[] = [
         id: "actions",
         cell: ({ row, table }) => {
             const lot = row.original;
-            const canRegisterAnalysis = lot.status === 'em_producao';
+            const canRegisterAnalysis = lot.status === 'active';
 
             return (
                 <div className="flex items-center gap-2">
