@@ -12,10 +12,13 @@ import { FinishedLot, IntermediateLot } from "@/types/production";
 import { Plus, Package, ArrowRight, Clock, CheckCircle, XCircle, FileText, Truck } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
+import { getTraceabilityGraph, TraceabilityGraph } from "@/lib/queries/traceability";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 export default function FinishedLotsPage() {
     const [lots, setLots] = useState<FinishedLot[]>([]);
     const [intermediateLots, setIntermediateLots] = useState<IntermediateLot[]>([]);
+    const [traceGraph, setTraceGraph] = useState<TraceabilityGraph | null>(null);
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({
         code: "",
@@ -23,6 +26,7 @@ export default function FinishedLotsPage() {
         status: "quarantine" as FinishedLot["status"]
     });
     const [loading, setLoading] = useState(false);
+    const { permissions, isLoading: permissionsLoading } = usePermissions();
 
     useEffect(() => {
         loadData();
@@ -30,12 +34,14 @@ export default function FinishedLotsPage() {
 
     const loadData = async () => {
         try {
-            const [lotsData, intLotsData] = await Promise.all([
+            const [lotsData, intLotsData, graphData] = await Promise.all([
                 getFinishedLots(),
-                getIntermediateLots()
+                getIntermediateLots(),
+                getTraceabilityGraph()
             ]);
             setLots(lotsData);
             setIntermediateLots(intLotsData);
+            setTraceGraph(graphData);
         } catch (error) {
             console.error("Error loading data:", error);
         }
@@ -94,6 +100,19 @@ Approved By: QA Manager
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    };
+
+    const getRelatedQualitySignals = (lot: FinishedLot) => {
+        if (!traceGraph) return { samples: [], ncs: [] };
+        const samples = traceGraph.samples.filter(
+            (sample) =>
+                sample.intermediate_lot_id === lot.intermediate_lot_id ||
+                sample.production_lot_id === (lot as any).intermediate_lot?.production_lot_id
+        );
+        const ncs = traceGraph.non_conformities.filter(
+            (nc) => nc.sample_id && samples.some((sample) => sample.id === nc.sample_id)
+        );
+        return { samples, ncs };
     };
 
     return (
@@ -179,6 +198,32 @@ Approved By: QA Manager
                                         <p className="text-sm text-muted-foreground mb-2">
                                             {lot.intermediate_lot.production_lot.product.name}
                                         </p>
+                                    )}
+
+                                    {!permissionsLoading && permissions.canViewReports && (
+                                        <div className="text-xs text-muted-foreground space-y-1 mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <ArrowRight className="h-3 w-3" />
+                                                <span>
+                                                    Origem: {lot.intermediate_lot?.production_lot?.code || "PL"}
+                                                </span>
+                                            </div>
+                                            {(() => {
+                                                const signals = getRelatedQualitySignals(lot);
+                                                return (
+                                                    <div className="flex flex-wrap gap-3">
+                                                        <span>{signals.samples.length} análises</span>
+                                                        <span>{signals.ncs.length} NC ligadas</span>
+                                                        <Link
+                                                            href={`/traceability/${encodeURIComponent(lot.code)}`}
+                                                            className="text-primary hover:underline"
+                                                        >
+                                                            Ver cadeia completa
+                                                        </Link>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
                                     )}
 
                                     <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">

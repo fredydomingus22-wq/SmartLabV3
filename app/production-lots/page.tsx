@@ -28,6 +28,7 @@ import {
     Loader2,
     Edit2,
     Lock,
+    ArrowRight,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
@@ -47,6 +48,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { buildProductionChains, getTraceabilityGraph, TraceabilityChain } from "@/lib/queries/traceability";
 
 function ProductionLotsContent() {
     const searchParams = useSearchParams();
@@ -57,6 +59,7 @@ function ProductionLotsContent() {
     const [products, setProducts] = useState<Product[]>([]);
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [stats, setStats] = useState<ProductionLotsStats | null>(null);
+    const [traceChains, setTraceChains] = useState<TraceabilityChain[]>([]);
     const [showDialog, setShowDialog] = useState(false);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -75,18 +78,20 @@ function ProductionLotsContent() {
     }, []);
 
     const loadData = async () => {
-        setLoading(true);
+            setLoading(true);
         try {
-            const [lotsData, productsData, profilesData, statsData] = await Promise.all([
+            const [lotsData, productsData, profilesData, statsData, traceGraph] = await Promise.all([
                 getProductionLots(),
                 getProducts(),
                 getProfiles(),
-                getProductionLotsStats()
+                getProductionLotsStats(),
+                getTraceabilityGraph()
             ]);
             setLots(lotsData);
             setProducts(productsData);
             setProfiles(profilesData);
             setStats(statsData);
+            setTraceChains(buildProductionChains(traceGraph));
         } catch (error) {
             console.error("Error loading data:", error);
             toast.error("Erro ao carregar dados");
@@ -137,6 +142,8 @@ function ProductionLotsContent() {
         await handleStatusChange(lotToClose, "completed");
         setLotToClose(null);
     };
+
+    const getChainForLot = (lotId: string) => traceChains.find((chain) => chain.productionLot.id === lotId);
 
     if (loading) {
         return (
@@ -345,6 +352,37 @@ function ProductionLotsContent() {
                                         <Clock className="h-3 w-3" />
                                         <span>{new Date(lot.created_at).toLocaleDateString('pt-PT')}</span>
                                     </div>
+
+                                    {!permissionsLoading && permissions.canViewReports && (
+                                        <div className="mt-3 text-xs text-muted-foreground space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <ArrowRight className="h-3 w-3" />
+                                                {(() => {
+                                                    const chain = getChainForLot(lot.id);
+                                                    const intermediates = chain?.intermediateLots.length || 0;
+                                                    const finished = chain?.finishedLots.length || 0;
+                                                    return <span>{intermediates} PI → {finished} PF</span>;
+                                                })()}
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-3">
+                                                <Link
+                                                    href={`/traceability/${encodeURIComponent(lot.code)}`}
+                                                    className="text-primary hover:underline"
+                                                >
+                                                    Ver rastreabilidade
+                                                </Link>
+                                                {(() => {
+                                                    const chain = getChainForLot(lot.id);
+                                                    if (!chain) return null;
+                                                    return (
+                                                        <span>
+                                                            {chain.samples.length} análises • {chain.nonConformities.length} NC
+                                                        </span>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className="mt-4 flex flex-wrap gap-2">
                                         <Link href={`/intermediate-lots?lot=${lot.id}`} className="flex-1 min-w-[120px]">

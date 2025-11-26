@@ -9,13 +9,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getRawMaterialLots, createRawMaterialLot, getRawMaterials } from "@/lib/queries/inventory";
 import { RawMaterialLot, RawMaterial } from "@/types/inventory";
-import { Plus, PackageCheck, Clock } from "lucide-react";
+import { Plus, PackageCheck, Clock, ArrowRight } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
+import { getTraceabilityGraph, TraceabilityGraph } from "@/lib/queries/traceability";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 export default function RawMaterialLotsPage() {
     const [lots, setLots] = useState<RawMaterialLot[]>([]);
     const [materials, setMaterials] = useState<RawMaterial[]>([]);
+    const [traceGraph, setTraceGraph] = useState<TraceabilityGraph | null>(null);
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({
         lot_code: "",
@@ -23,6 +26,7 @@ export default function RawMaterialLotsPage() {
         status: "pending" as RawMaterialLot["status"]
     });
     const [loading, setLoading] = useState(false);
+    const { permissions, isLoading: permissionsLoading } = usePermissions();
 
     useEffect(() => {
         loadData();
@@ -30,12 +34,14 @@ export default function RawMaterialLotsPage() {
 
     const loadData = async () => {
         try {
-            const [lotsData, materialsData] = await Promise.all([
+            const [lotsData, materialsData, graph] = await Promise.all([
                 getRawMaterialLots(),
-                getRawMaterials()
+                getRawMaterials(),
+                getTraceabilityGraph()
             ]);
             setLots(lotsData);
             setMaterials(materialsData);
+            setTraceGraph(graph);
         } catch (error) {
             console.error("Error loading data:", error);
         }
@@ -54,6 +60,17 @@ export default function RawMaterialLotsPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const getIntermediateChildren = (lot: RawMaterialLot) => {
+        if (!traceGraph) return [];
+        return traceGraph.intermediate_lots.filter((intermediateLot: any) =>
+            (intermediateLot.ingredients || []).some(
+                (ingredient: any) =>
+                    ingredient.raw_material_id === lot.raw_material_id ||
+                    ingredient.lot_number === lot.lot_code
+            )
+        );
     };
 
     return (
@@ -153,6 +170,25 @@ export default function RawMaterialLotsPage() {
                                         <Clock className="h-3 w-3" />
                                         <span>Received {new Date(lot.created_at).toLocaleDateString()}</span>
                                     </div>
+
+                                    {!permissionsLoading && permissions.canViewReports && (
+                                        <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                                            <div className="flex items-center gap-2">
+                                                <ArrowRight className="h-3 w-3" />
+                                                <span>{getIntermediateChildren(lot).length} intermediate lots using this batch</span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {getIntermediateChildren(lot).slice(0, 3).map((child) => (
+                                                    <Link key={child.id} href={`/intermediate-lots?lot=${child.production_lot_id}`} className="text-primary hover:underline">
+                                                        {child.code}
+                                                    </Link>
+                                                ))}
+                                                {getIntermediateChildren(lot).length === 0 && (
+                                                    <span className="text-muted-foreground">No consumption registered yet</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className="mt-3">
                                         <Link href={`/shared/forms/raw_material_lot/${lot.id}`}>

@@ -18,6 +18,8 @@ import { StateChangeDialog } from "@/components/production/StateChangeDialog";
 
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
+import { getTraceabilityGraph, buildProductionChains, TraceabilityChain } from "@/lib/queries/traceability";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 function IntermediateLotsContent() {
     const searchParams = useSearchParams();
@@ -25,8 +27,10 @@ function IntermediateLotsContent() {
 
     const [lots, setLots] = useState<IntermediateLot[]>([]);
     const [productionLots, setProductionLots] = useState<ProductionLot[]>([]);
+    const [traceChains, setTraceChains] = useState<TraceabilityChain[]>([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+    const { permissions, isLoading: permissionsLoading } = usePermissions();
 
     useEffect(() => {
         loadData();
@@ -35,12 +39,14 @@ function IntermediateLotsContent() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [lotsData, prodLotsData] = await Promise.all([
+            const [lotsData, prodLotsData, traceGraph] = await Promise.all([
                 lotFilter ? getIntermediateLotsByProductionLot(lotFilter) : getIntermediateLots(),
-                getProductionLots()
+                getProductionLots(),
+                getTraceabilityGraph()
             ]);
             setLots(lotsData);
             setProductionLots(prodLotsData);
+            setTraceChains(buildProductionChains(traceGraph));
         } catch (error) {
             console.error("Error loading data:", error);
         } finally {
@@ -68,6 +74,9 @@ function IntermediateLotsContent() {
         terminado: lots.filter(l => l.status === 'terminado').length,
         consumido: lots.filter(l => l.status === 'consumido').length,
     };
+
+    const getChainForProduction = (productionLotId: string) =>
+        traceChains.find(chain => chain.productionLot.id === productionLotId);
 
     // Find selected production lot if filtering
     const selectedProductionLot = lotFilter
@@ -145,6 +154,34 @@ function IntermediateLotsContent() {
                         </CardContent>
                     </Card>
                 </div>
+
+                {!permissionsLoading && permissions.canViewReports && lots.length > 0 && (
+                    <Card className="bg-slate-900 border-slate-800">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                                Cadeias relacionadas
+                            </CardTitle>
+                            <p className="text-xs text-muted-foreground">Pais e filhos diretos deste lote intermédio</p>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {lots.slice(0, 5).map((lot) => {
+                                const chain = getChainForProduction(lot.production_lot_id);
+                                const finished = chain?.finishedLots.filter((fin) => fin.intermediate_lot_id === lot.id) || [];
+                                return (
+                                    <div key={lot.id} className="text-xs flex flex-wrap items-center gap-2">
+                                        <span className="font-mono text-primary">{lot.code}</span>
+                                        <span className="text-muted-foreground">→ {finished.length} PF</span>
+                                        <Link href={`/production-lots?product=${lot.production_lot?.product_id || ''}`} className="text-primary hover:underline">
+                                            {lot.production_lot?.code || "PL"}
+                                        </Link>
+                                        <span className="text-muted-foreground">• {chain?.samples.length || 0} análises</span>
+                                        <span className="text-muted-foreground">• {chain?.nonConformities.length || 0} NC</span>
+                                    </div>
+                                );
+                            })}
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* View Toggle & Content */}
                 <Card className="bg-slate-900 border-slate-800">

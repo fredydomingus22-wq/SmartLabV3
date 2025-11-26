@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,41 @@ import { MonitoredProduction } from "@/components/traceability/MonitoredProducti
 import { LotDetailModal } from "@/components/traceability/LotDetailModal";
 import { Search, Sparkles, Filter, Download, FileDown } from "lucide-react";
 import { toast } from "sonner";
+import { getTraceabilityGraph, buildProductionChains, TraceabilityChain } from "@/lib/queries/traceability";
+import { TraceabilityGraph as TraceGraph } from "@/components/traceability/TraceabilityGraph";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 export default function TraceabilityPage() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedLot, setSelectedLot] = useState<any>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [chains, setChains] = useState<TraceabilityChain[]>([]);
+    const [graphLoading, setGraphLoading] = useState(true);
+    const { permissions, isLoading: permissionsLoading } = usePermissions();
+
+    useEffect(() => {
+        if (permissionsLoading) return;
+        if (!permissions.canViewReports) {
+            setGraphLoading(false);
+            return;
+        }
+
+        const loadGraph = async () => {
+            try {
+                setGraphLoading(true);
+                const graph = await getTraceabilityGraph();
+                setChains(buildProductionChains(graph));
+            } catch (error) {
+                console.error(error);
+                toast.error("Não foi possível carregar a genealogia");
+            } finally {
+                setGraphLoading(false);
+            }
+        };
+
+        loadGraph();
+    }, [permissionsLoading, permissions.canViewReports]);
 
     const flowStages = [
         { id: "rm", code: "RM", name: "Matéria-prima", description: "Recebimento + COA", color: "green", icon: "package", href: "/raw-materials" },
@@ -36,47 +65,19 @@ export default function TraceabilityPage() {
         { type: "PCC", code: "PCC-14", description: "PCC-14 inspecionado", time: "11:30", location: "Food Safety" }
     ];
 
-    const productionChains = [
-        {
-            id: "1",
-            lote_pai: "PL-240915-01",
-            lote_pai_id: "uuid-pl-01",
-            rm: "RM-ACUC-4412",
-            rm_id: "uuid-rm-01",
-            pi: "INT-240915-05",
-            pi_id: "uuid-pi-01",
-            pf: "PF-240915-09",
-            pf_id: "uuid-pf-01",
-            nc: "-",
-            pcc: "PCC 12"
-        },
-        {
-            id: "2",
-            lote_pai: "PL-240915-04",
-            lote_pai_id: "uuid-pl-02",
-            rm: "RM-AROMA-217",
-            rm_id: "uuid-rm-02",
-            pi: "INT-240915-08",
-            pi_id: "uuid-pi-02",
-            pf: "PF-240915-12",
-            pf_id: "uuid-pf-02",
-            nc: "NC-4810",
-            pcc: "07"
-        },
-        {
-            id: "3",
-            lote_pai: "PL-240915-11",
-            lote_pai_id: "uuid-pl-03",
-            rm: "RM-CHÁ-198",
-            rm_id: "uuid-rm-03",
-            pi: "INT-240915-15",
-            pi_id: "uuid-pi-03",
-            pf: "PF-240915-21",
-            pf_id: "uuid-pf-03",
-            nc: "NC-4826",
-            pcc: "PCC 14"
-        }
-    ];
+    const monitoredChains = chains.map((chain) => ({
+        id: chain.productionLot.id,
+        lote_pai: chain.productionLot.code,
+        lote_pai_id: chain.productionLot.id,
+        rm: chain.rawMaterials.map((rm) => rm.lot_code).join(", ") || "-",
+        rm_id: chain.rawMaterials[0]?.id || chain.productionLot.id,
+        pi: chain.intermediateLots.map((pi) => pi.code).join(", ") || "-",
+        pi_id: chain.intermediateLots[0]?.id || chain.productionLot.id,
+        pf: chain.finishedLots.map((pf) => pf.code).join(", ") || "-",
+        pf_id: chain.finishedLots[0]?.id || chain.productionLot.id,
+        nc: chain.nonConformities.length ? `${chain.nonConformities.length} NC` : "-",
+        pcc: "-",
+    }));
 
     const handleSearch = () => {
         if (!searchQuery.trim()) {
@@ -92,19 +93,20 @@ export default function TraceabilityPage() {
     };
 
     const handleViewDetail = (id: string, type: string) => {
+        const chain = chains.find((c) => c.productionLot.id === id);
         const mockLot = {
             id,
-            code: productionChains.find(c => c.lote_pai_id === id)?.lote_pai || "LOT-UNKNOWN",
+            code: chain?.productionLot.code || searchQuery || "LOT-UNKNOWN",
             type: type as "production" | "intermediate" | "finished",
-            status: "active",
-            product: "Cola 2L PET",
+            status: chain?.productionLot.status || "active",
+            product: chain?.productionLot.product?.name || "N/A",
             created_at: new Date().toISOString(),
-            location: "Linha 1",
-            operator: "João Silva",
+            location: chain?.productionLot.production_line || "Linha 1",
+            operator: "Operador",
             genealogy: {
-                parent: "RM-ACUC-4412",
-                children: ["INT-240915-05", "INT-240915-06"]
-            }
+                parent: chain?.rawMaterials[0]?.lot_code || "RM",
+                children: chain?.intermediateLots.map((pi) => pi.code) || [],
+            },
         };
         setSelectedLot(mockLot);
         setIsDetailOpen(true);
@@ -175,7 +177,33 @@ export default function TraceabilityPage() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <RecentEvents events={recentEvents} />
-                    <MonitoredProduction chains={productionChains} onViewDetail={handleViewDetail} />
+                    <MonitoredProduction chains={monitoredChains} onViewDetail={handleViewDetail} />
+                </div>
+
+                <div className="bg-card border rounded-2xl p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 className="text-lg font-semibold">Linha do tempo consolidada</h3>
+                            <p className="text-sm text-muted-foreground">RM → PL → PI → PF com status e eventos QA</p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={handleExport}>
+                            <Download className="h-4 w-4 mr-2" /> Exportar
+                        </Button>
+                    </div>
+
+                    {permissionsLoading ? (
+                        <div className="py-8 text-center text-muted-foreground">Validando permissões...</div>
+                    ) : permissions.canViewReports ? (
+                        graphLoading ? (
+                            <div className="py-10 text-center text-muted-foreground">Carregando relações...</div>
+                        ) : (
+                            <TraceGraph chains={chains} />
+                        )
+                    ) : (
+                        <div className="py-6 text-sm text-muted-foreground">
+                            As relações inter-planta estão ocultas para este perfil.
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
