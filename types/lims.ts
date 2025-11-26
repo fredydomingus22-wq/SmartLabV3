@@ -1,17 +1,44 @@
+import type { SampleStatus } from "@/lib/constants/status";
+import type { SamplePhase, SampleType } from "@/lib/validations/samples";
+
 export interface Sample {
     id: string;
     code: string;
-    type: string;
-    raw_material_lot_id?: string;
-    production_lot_id?: string;
-    status: 'pending' | 'in_analysis' | 'reviewed' | 'approved';
-    priority: 'normal' | 'high' | 'urgent';
-    collected_by?: string;
-    collected_at?: string;
-    received_by?: string;
-    received_at?: string;
-    notes?: string;
+    sample_type: SampleType;
+    phase?: SamplePhase | null;
+    product_id?: string | null;
+    production_lot_id?: string | null;
+    intermediate_lot_id?: string | null;
+    tank_id?: string | null;
+    status: SampleStatus;
+    priority?: "normal" | "high" | "urgent";
+    assigned_to?: string | null;
+    collected_by?: string | null;
+    collected_at: string;
+    received_by?: string | null;
+    received_at?: string | null;
+    observations?: string | null;
+    sequence_number?: number | null;
+    collection_site?: string | null;
     created_at: string;
+    updated_at?: string | null;
+
+    // Relations (flattened for UI convenience)
+    product?: {
+        id?: string;
+        name?: string;
+        sku?: string;
+        code?: string;
+    };
+    tank?: {
+        id?: string;
+        code?: string;
+        name?: string;
+    };
+    production_lot?: {
+        id?: string;
+        code?: string;
+    };
 }
 
 export interface LabAnalysis {
