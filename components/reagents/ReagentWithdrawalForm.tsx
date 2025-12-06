@@ -21,6 +21,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useServerAction } from "@/lib/hooks/useServerAction";
 import { ReagentWithStock } from "@/types/reagent";
 import { ArrowUpFromLine, AlertTriangle } from "lucide-react";
 
@@ -37,7 +38,6 @@ export function ReagentWithdrawalForm({
     reagent,
     onSuccess
 }: ReagentWithdrawalFormProps) {
-    const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         quantity: "",
         purpose: "",
@@ -46,40 +46,38 @@ export function ReagentWithdrawalForm({
         notes: "",
     });
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!reagent) return;
+    const registerWithdrawal = async (data: typeof formData) => {
+        if (!reagent) throw new Error("Reagent not selected");
 
-        const quantity = parseFloat(formData.quantity);
+        const quantity = parseFloat(data.quantity);
 
         // Validation
         if (quantity > reagent.stock_current) {
-            toast.error(`Insufficient stock! Available: ${reagent.stock_current} ${reagent.unit}`);
-            return;
+            throw new Error(`Insufficient stock! Available: ${reagent.stock_current} ${reagent.unit}`);
         }
 
-        setLoading(true);
-        try {
-            // Create stock movement withdrawal
-            const response = await fetch("/api/reagents/movements", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    reagent_id: reagent.id,
-                    movement_type: "withdrawal",
-                    quantity: quantity,
-                    purpose: formData.purpose,
-                    used_by: formData.used_by,
-                    batch_number: formData.batch_number,
-                    notes: formData.notes,
-                }),
-            });
+        const response = await fetch("/api/reagents/movements", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                reagent_id: reagent.id,
+                movement_type: "withdrawal",
+                quantity: quantity,
+                purpose: data.purpose,
+                used_by: data.used_by,
+                batch_number: data.batch_number,
+                notes: data.notes,
+            }),
+        });
 
-            if (!response.ok) throw new Error("Failed to register withdrawal");
+        if (!response.ok) throw new Error("Failed to register withdrawal");
 
-            toast.success(`Withdrawal registered: -${formData.quantity} ${reagent.unit}`);
+        return { quantity: data.quantity, unit: reagent.unit };
+    };
 
-            // Reset form
+    const { execute, loading } = useServerAction(registerWithdrawal, {
+        successMessage: reagent ? `Withdrawal registered: -${formData.quantity} ${reagent.unit}` : "Withdrawal registered",
+        onSuccess: () => {
             setFormData({
                 quantity: "",
                 purpose: "",
@@ -87,15 +85,14 @@ export function ReagentWithdrawalForm({
                 batch_number: "",
                 notes: "",
             });
-
             onOpenChange(false);
             onSuccess?.();
-        } catch (error) {
-            console.error("Error registering withdrawal:", error);
-            toast.error("Failed to register withdrawal");
-        } finally {
-            setLoading(false);
         }
+    });
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await execute(formData);
     };
 
     const willBeLowStock = reagent && (reagent.stock_current - parseFloat(formData.quantity || "0")) < reagent.stock_min;

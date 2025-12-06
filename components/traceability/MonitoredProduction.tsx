@@ -9,11 +9,11 @@ interface ProductionChain {
     lote_pai: string;
     lote_pai_id: string;
     rm: string;
-    rm_id: string;
+    rm_id: string | null;
     pi: string;
-    pi_id: string;
+    pi_id: string | null;
     pf: string;
-    pf_id: string;
+    pf_id: string | null;
     nc?: string;
     pcc?: string;
 }

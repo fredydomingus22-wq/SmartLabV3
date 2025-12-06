@@ -8,8 +8,8 @@ export const productionLotSchema = z.object({
         required_error: "Por favor selecione um produto.",
     }),
     factory_id: z.string().optional(),
-    production_line: z.string().optional(),
-    shift: z.string().optional(),
+    production_line_id: z.string().optional(),
+    shift_id: z.string().optional(),
     status: z.enum([
         "draft",
         "on_hold",

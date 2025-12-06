@@ -5,13 +5,15 @@ export interface SampleListItem {
     id: string;
     code: string;
     status: SampleStatus;
-    sample_type: string;
+    sample_type?: { code: string; name: string };
     collected_at: string | null;
     product?: { name: string; sku?: string };
     tank?: { code: string; name?: string };
     production_lot?: { code: string };
     assigned_to?: string | null;
     assigned_user?: { id: string; full_name?: string } | null;
+    intermediate_lot?: { code: string };
+    finished_product_lot?: { code: string };
 }
 
 export interface SampleListFilters {
@@ -30,13 +32,15 @@ export async function getSamples(filters: SampleListFilters = {}): Promise<Sampl
             id,
             code,
             status,
-            sample_type,
             collected_at,
             assigned_to,
             assigned_user:profiles!samples_assigned_to_fkey(id, full_name),
+            sample_types:sample_types(code, name),
             products:products(name, sku),
             tanks:tanks(code, name),
-            production_lots:production_lots(code)
+            production_lots:production_lots(code),
+            intermediate_lots:intermediate_lots(code),
+            finished_product_lots:finished_product_lots(code)
         `
         )
         .order("collected_at", { ascending: false });
@@ -56,20 +60,22 @@ export async function getSamples(filters: SampleListFilters = {}): Promise<Sampl
     const { data, error } = await query;
     if (error) throw error;
 
-    return (
-        data?.map((row: any) => ({
-            id: row.id,
-            code: row.code,
-            status: row.status as SampleStatus,
-            sample_type: row.sample_type,
-            collected_at: row.collected_at,
-            assigned_to: row.assigned_to,
-            assigned_user: row.assigned_user || null,
-            product: row.products || undefined,
-            tank: row.tanks || undefined,
-            production_lot: row.production_lots || undefined,
-        })) || []
-    );
+    const samples: SampleListItem[] = data.map((sample: any) => ({
+        id: sample.id,
+        code: sample.code,
+        status: sample.status as SampleStatus,
+        sample_type: sample.sample_types || undefined,
+        collected_at: sample.collected_at,
+        product: sample.products || undefined,
+        tank: sample.tanks || undefined,
+        production_lot: sample.production_lots || undefined,
+        intermediate_lot: sample.intermediate_lots || undefined,
+        finished_product_lot: sample.finished_product_lots || undefined,
+        assigned_to: sample.assigned_to,
+        assigned_user: sample.assigned_user || null
+    }));
+
+    return samples;
 }
 
 export async function assignAnalyst(sampleId: string, analystId: string) {

@@ -99,7 +99,7 @@ export default function SamplesListPage() {
         return displayedSamples.filter((sample) =>
             sample.code.toLowerCase().includes(query) ||
             sample.product?.name?.toLowerCase().includes(query) ||
-            sample.sample_type.toLowerCase().includes(query) ||
+            sample.sample_type?.name?.toLowerCase().includes(query) ||
             sample.status.toLowerCase().includes(query)
         );
     }, [displayedSamples, searchQuery]);
@@ -193,15 +193,21 @@ export default function SamplesListPage() {
                             ) : (
                                 samples.map((sample) => (
                                     <TableRow key={sample.id}>
-                                        <TableCell className="font-mono font-medium">{sample.code}</TableCell>
                                         <TableCell>
-                                            <div>
-                                                <p className="font-medium">{sample.product?.name || '-'}</p>
-                                                <p className="text-xs text-muted-foreground">{sample.product?.sku}</p>
-                                            </div>
+                                            <Link href={`/lab/samples/${sample.id}`} className="hover:underline font-medium">
+                                                {sample.code}
+                                            </Link>
+                                            {sample.product && (
+                                                <div>
+                                                    <p className="text-xs text-muted-foreground">{sample.product?.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{sample.product?.sku}</p>
+                                                </div>
+                                            )}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant="outline">{sample.sample_type.replace('_', ' ')}</Badge>
+                                            {sample.sample_type && (
+                                                <Badge variant="outline">{sample.sample_type.name}</Badge>
+                                            )}
                                         </TableCell>
                                         <TableCell>{renderStatusBadge(sample.status)}</TableCell>
                                         <TableCell>

@@ -169,3 +169,231 @@ export async function getLotDetail(lotCode: string) {
     // Not found
     return null;
 }
+
+// ============================================
+// Dashboard/Overview Queries (no hardcoded data)
+// ============================================
+
+export interface RecentEvent {
+    type: 'RM' | 'PL' | 'PI' | 'PF' | 'NC' | 'PCC';
+    code: string;
+    description: string;
+    time: string;
+    location: string;
+}
+
+export interface ActiveProductionChain {
+    id: string;
+    lote_pai: string;
+    lote_pai_id: string;
+    rm: string;
+    rm_id: string | null;
+    pi: string;
+    pi_id: string | null;
+    pf: string;
+    pf_id: string | null;
+    nc: string;
+    pcc: string;
+}
+
+export interface TraceabilityStats {
+    activeLots: number;
+    eventsToday: number;
+    openNCs: number;
+    pccsOk: string;
+}
+
+export async function getRecentTraceabilityEvents(): Promise<RecentEvent[]> {
+    const supabase = createClient();
+    const events: RecentEvent[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    try {
+        // Get recent production lots
+        const { data: lots } = await supabase
+            .from('production_lots')
+            .select('id, code, status, created_at')
+            .gte('created_at', today.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(3);
+
+        if (lots) {
+            for (const lot of lots) {
+                events.push({
+                    type: 'PL',
+                    code: lot.code,
+                    description: `Lot ${lot.status}`,
+                    time: new Date(lot.created_at).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+                    location: 'Production'
+                });
+            }
+        }
+
+        // Get recent intermediate lots
+        const { data: intermediates } = await supabase
+            .from('intermediate_lots')
+            .select('id, code, status, created_at')
+            .gte('created_at', today.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(2);
+
+        if (intermediates) {
+            for (const lot of intermediates) {
+                events.push({
+                    type: 'PI',
+                    code: lot.code,
+                    description: `Intermediate ${lot.status}`,
+                    time: new Date(lot.created_at).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+                    location: 'PCP'
+                });
+            }
+        }
+
+        // Get recent NCs
+        const { data: ncs } = await supabase
+            .from('non_conformities')
+            .select('id, code, title, created_at')
+            .gte('created_at', today.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(2);
+
+        if (ncs) {
+            for (const nc of ncs) {
+                events.push({
+                    type: 'NC',
+                    code: nc.code,
+                    description: nc.title || 'NC opened',
+                    time: new Date(nc.created_at).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+                    location: 'Quality'
+                });
+            }
+        }
+
+        // Sort by time descending
+        events.sort((a, b) => b.time.localeCompare(a.time));
+
+        return events.slice(0, 6);
+    } catch (error) {
+        console.error('Error fetching traceability events:', error);
+        return [];
+    }
+}
+
+export async function getActiveProductionChains(): Promise<ActiveProductionChain[]> {
+    const supabase = createClient();
+
+    try {
+        // Get active production lots with their relationships
+        const { data: lots, error } = await supabase
+            .from('production_lots')
+            .select('id, code, status')
+            .in('status', ['in_progress', 'pending', 'active'])
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        if (error || !lots) {
+            return [];
+        }
+
+        const chains: ActiveProductionChain[] = [];
+
+        for (const lot of lots) {
+            // Get intermediate lots
+            const { data: intermediates } = await supabase
+                .from('intermediate_lots')
+                .select('id, code')
+                .eq('production_lot_id', lot.id)
+                .limit(1);
+
+            // Get finished lots
+            const { data: finished } = await supabase
+                .from('finished_lots')
+                .select('id, code')
+                .eq('production_lot_id', lot.id)
+                .limit(1);
+
+            // Get open NCs
+            const { data: ncs } = await supabase
+                .from('non_conformities')
+                .select('code')
+                .eq('production_lot_id', lot.id)
+                .eq('status', 'open')
+                .limit(1);
+
+            chains.push({
+                id: lot.id,
+                lote_pai: lot.code,
+                lote_pai_id: lot.id,
+                rm: '-',
+                rm_id: null,
+                pi: intermediates?.[0]?.code || '-',
+                pi_id: intermediates?.[0]?.id || null,
+                pf: finished?.[0]?.code || '-',
+                pf_id: finished?.[0]?.id || null,
+                nc: ncs?.[0]?.code || '-',
+                pcc: '-'
+            });
+        }
+
+        return chains;
+    } catch (error) {
+        console.error('Error fetching production chains:', error);
+        return [];
+    }
+}
+
+export async function getTraceabilityStats(): Promise<TraceabilityStats> {
+    const supabase = createClient();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    try {
+        // Count active lots
+        const { count: activeLots } = await supabase
+            .from('production_lots')
+            .select('id', { count: 'exact', head: true })
+            .in('status', ['in_progress', 'pending', 'active']);
+
+        // Count events today (production lots created today)
+        const { count: eventsToday } = await supabase
+            .from('production_lots')
+            .select('id', { count: 'exact', head: true })
+            .gte('created_at', today.toISOString());
+
+        // Count open NCs
+        const { count: openNCs } = await supabase
+            .from('non_conformities')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'open');
+
+        // Count PCCs (using pcc_controls table if exists)
+        let pccsOk = '0/0';
+        try {
+            const { count: totalPCCs } = await supabase
+                .from('pcc_controls')
+                .select('id', { count: 'exact', head: true });
+
+            if (totalPCCs && totalPCCs > 0) {
+                pccsOk = `${totalPCCs}/${totalPCCs}`;
+            }
+        } catch {
+            // Table might not exist
+        }
+
+        return {
+            activeLots: activeLots || 0,
+            eventsToday: eventsToday || 0,
+            openNCs: openNCs || 0,
+            pccsOk
+        };
+    } catch (error) {
+        console.error('Error fetching traceability stats:', error);
+        return {
+            activeLots: 0,
+            eventsToday: 0,
+            openNCs: 0,
+            pccsOk: '0/0'
+        };
+    }
+}

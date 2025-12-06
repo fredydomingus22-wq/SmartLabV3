@@ -20,6 +20,7 @@ import {
 import { Loader2, UserPlus } from "lucide-react";
 import { assignAnalyst } from "@/lib/workflows/samples";
 import { getTechnicians } from "@/lib/queries/samples";
+import { useServerAction } from "@/lib/hooks/useServerAction";
 import { toast } from "sonner";
 
 interface AnalystAssignmentDialogProps {
@@ -39,7 +40,6 @@ export function AnalystAssignmentDialog({
 }: AnalystAssignmentDialogProps) {
     const [technicians, setTechnicians] = useState<{ id: string; full_name?: string }[]>([]);
     const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
     const [selectedAnalyst, setSelectedAnalyst] = useState<string | undefined>(currentAnalystId || undefined);
 
     useEffect(() => {
@@ -62,24 +62,25 @@ export function AnalystAssignmentDialog({
         }
     }
 
+    const performAssignment = async (analystId: string) => {
+        await assignAnalyst(sampleId, analystId);
+        return analystId;
+    };
+
+    const { execute, loading: saving } = useServerAction(performAssignment, {
+        successMessage: "Técnico atribuído",
+        onSuccess: (analystId) => {
+            onAssigned?.(analystId);
+            onOpenChange(false);
+        }
+    });
+
     async function handleAssign() {
         if (!selectedAnalyst) {
             toast.error("Selecione um técnico");
             return;
         }
-
-        setSaving(true);
-        try {
-            await assignAnalyst(sampleId, selectedAnalyst);
-            toast.success("Técnico atribuído");
-            onAssigned?.(selectedAnalyst);
-            onOpenChange(false);
-        } catch (error) {
-            console.error("Assign analyst error", error);
-            toast.error("Erro ao atribuir técnico");
-        } finally {
-            setSaving(false);
-        }
+        await execute(selectedAnalyst);
     }
 
     return (

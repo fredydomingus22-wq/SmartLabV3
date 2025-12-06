@@ -8,7 +8,7 @@ WITH expected_tables AS (
         'products',
         'production_lots',
         'intermediate_lots',
-        'finished_lots',
+        'finished_product_lots',
         'non_conformities',
         'eight_d_reports',
         'samples',

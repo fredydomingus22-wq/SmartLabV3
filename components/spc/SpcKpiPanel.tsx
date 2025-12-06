@@ -1,6 +1,6 @@
 import { calculateStabilityIndex } from "@/lib/spc/engine";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard } from "@/components/shared/StatCard";
 import { SPCAnalysisResult, SpcPrediction } from "@/types/spc";
 import { Activity, AlertTriangle, Gauge, Sigma } from "lucide-react";
 

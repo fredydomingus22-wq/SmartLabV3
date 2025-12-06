@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { IntermediateLot } from "@/types/production";
 import { createClient } from "@/lib/supabase/client";
+import { useServerAction } from "@/lib/hooks/useServerAction";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
 
@@ -36,7 +37,6 @@ export function StateChangeDialog({
     lot,
     onSuccess
 }: StateChangeDialogProps) {
-    const [loading, setLoading] = useState(false);
     const [newStatus, setNewStatus] = useState<IntermediateLot['status'] | ''>('');
 
     if (!lot) return null;
@@ -54,37 +54,37 @@ export function StateChangeDialog({
         return false;
     });
 
-    const handleSave = async () => {
-        if (!newStatus) return;
-        setLoading(true);
+    const updateStatus = async (status: IntermediateLot['status']) => {
         const supabase = createClient();
+        const updates: any = { status };
+        const now = new Date().toISOString();
 
-        try {
-            const updates: any = { status: newStatus };
-            const now = new Date().toISOString();
+        if (status === 'terminado' && !lot.prepared_at) {
+            updates.prepared_at = now;
+        }
 
-            if (newStatus === 'terminado' && !lot.prepared_at) {
-                updates.prepared_at = now;
-            }
+        const { error } = await supabase
+            .from('intermediate_lots')
+            .update(updates)
+            .eq('id', lot.id);
 
-            const { error } = await supabase
-                .from('intermediate_lots')
-                .update(updates)
-                .eq('id', lot.id);
+        if (error) throw error;
 
-            if (error) throw error;
+        return { status, label: availableStatuses.find(s => s.value === status)?.label };
+    };
 
-            toast.success(`Status updated to ${availableStatuses.find(s => s.value === newStatus)?.label}`);
+    const { execute, loading } = useServerAction(updateStatus, {
+        successMessage: 'Status updated successfully',
+        onSuccess: () => {
             onSuccess();
             onOpenChange(false);
             setNewStatus('');
-
-        } catch (error) {
-            console.error("Error updating status:", error);
-            toast.error("Failed to update status");
-        } finally {
-            setLoading(false);
         }
+    });
+
+    const handleSave = async () => {
+        if (!newStatus) return;
+        await execute(newStatus as IntermediateLot['status']);
     };
 
     return (

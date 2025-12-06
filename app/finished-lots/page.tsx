@@ -7,20 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getFinishedLots, createFinishedLot, getIntermediateLots, updateFinishedLotStatus } from "@/lib/queries/production";
-import { FinishedLot, IntermediateLot } from "@/types/production";
+import { getFinishedLots, createFinishedLot, updateFinishedLotStatus, FinishedProductLot } from "@/lib/queries/finished-lots";
+import { getIntermediateLots } from "@/lib/queries/production";
+import { IntermediateLot } from "@/types/production";
 import { Plus, Package, ArrowRight, Clock, CheckCircle, XCircle, FileText, Truck } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 
 export default function FinishedLotsPage() {
-    const [lots, setLots] = useState<FinishedLot[]>([]);
+    const [lots, setLots] = useState<FinishedProductLot[]>([]);
     const [intermediateLots, setIntermediateLots] = useState<IntermediateLot[]>([]);
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({
         code: "",
         intermediate_lot_id: "",
-        status: "quarantine" as FinishedLot["status"]
+        status: "active" as FinishedProductLot["status"]
     });
     const [loading, setLoading] = useState(false);
 
@@ -46,7 +47,7 @@ export default function FinishedLotsPage() {
         setLoading(true);
         try {
             await createFinishedLot(formData);
-            setFormData({ code: "", intermediate_lot_id: "", status: "quarantine" });
+            setFormData({ code: "", intermediate_lot_id: "", status: "active" });
             setShowForm(false);
             loadData();
         } catch (error) {
@@ -56,7 +57,7 @@ export default function FinishedLotsPage() {
         }
     };
 
-    const handleStatusChange = async (id: string, newStatus: FinishedLot["status"]) => {
+    const handleStatusChange = async (id: string, newStatus: FinishedProductLot["status"]) => {
         if (!confirm(`Are you sure you want to change status to ${newStatus.toUpperCase()}?`)) return;
 
         try {
@@ -67,7 +68,7 @@ export default function FinishedLotsPage() {
         }
     };
 
-    const handleGenerateCOA = (lot: FinishedLot) => {
+    const handleGenerateCOA = (lot: FinishedProductLot) => {
         // Mock COA Generation - In a real app, this would generate a PDF
         const coaContent = `
 CERTIFICATE OF ANALYSIS
@@ -76,11 +77,6 @@ Lot Code: ${lot.code}
 Product: ${lot.intermediate_lot?.production_lot?.product?.name || 'N/A'}
 Date: ${new Date().toLocaleDateString()}
 Status: ${lot.status.toUpperCase()}
-
-Analysis Results:
-- pH: ${lot.ph || 'N/A'}
-- Brix: ${lot.brix || 'N/A'}
-- Density: ${lot.density || 'N/A'}
 
 Approved By: QA Manager
         `;
@@ -193,36 +189,35 @@ Approved By: QA Manager
                                             </Button>
                                         </Link>
 
-                                        {lot.status === "quarantine" && (
+                                        {lot.status === "active" && (
                                             <>
                                                 <Button
                                                     size="sm"
                                                     variant="default"
-                                                    onClick={() => handleStatusChange(lot.id, "approved")}
+                                                    className="bg-green-600 hover:bg-green-700"
+                                                    onClick={() => handleStatusChange(lot.id, "released")}
                                                 >
                                                     <CheckCircle className="mr-1 h-3 w-3" />
-                                                    Approve
+                                                    Release
                                                 </Button>
                                                 <Button
                                                     size="sm"
                                                     variant="destructive"
-                                                    onClick={() => handleStatusChange(lot.id, "rejected")}
+                                                    onClick={() => handleStatusChange(lot.id, "blocked")}
                                                 >
                                                     <XCircle className="mr-1 h-3 w-3" />
-                                                    Reject
+                                                    Block
                                                 </Button>
                                             </>
                                         )}
 
-                                        {lot.status === "approved" && (
+                                        {(lot.status === "blocked" || lot.status === "quarantine") && (
                                             <Button
                                                 size="sm"
-                                                variant="default"
-                                                className="bg-green-600 hover:bg-green-700"
-                                                onClick={() => handleStatusChange(lot.id, "released")}
+                                                variant="outline"
+                                                onClick={() => handleStatusChange(lot.id, "active")}
                                             >
-                                                <Truck className="mr-1 h-3 w-3" />
-                                                Release
+                                                Reactivate
                                             </Button>
                                         )}
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -9,15 +9,35 @@ import { FlowCard } from "@/components/traceability/FlowCard";
 import { RecentEvents } from "@/components/traceability/RecentEvents";
 import { MonitoredProduction } from "@/components/traceability/MonitoredProduction";
 import { LotDetailModal } from "@/components/traceability/LotDetailModal";
-import { Search, Sparkles, Filter, Download, FileDown } from "lucide-react";
+import { Search, Sparkles, Filter, Download, FileDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+    getRecentTraceabilityEvents,
+    getActiveProductionChains,
+    getTraceabilityStats,
+    RecentEvent,
+    ActiveProductionChain,
+    TraceabilityStats
+} from "@/lib/queries/traceability";
 
 export default function TraceabilityPage() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedLot, setSelectedLot] = useState<any>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
 
+    // State for database-driven data
+    const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([]);
+    const [productionChains, setProductionChains] = useState<ActiveProductionChain[]>([]);
+    const [stats, setStats] = useState<TraceabilityStats>({
+        activeLots: 0,
+        eventsToday: 0,
+        openNCs: 0,
+        pccsOk: '0/0'
+    });
+
+    // Navigation flow stages (acceptable as UI config)
     const flowStages = [
         { id: "rm", code: "RM", name: "Matéria-prima", description: "Recebimento + COA", color: "green", icon: "package", href: "/raw-materials" },
         { id: "pl", code: "PL", name: "Lote pai", description: "Preparação xarope", color: "blue", icon: "factory", href: "/production-lots" },
@@ -27,63 +47,34 @@ export default function TraceabilityPage() {
         { id: "pcc", code: "PCC", name: "PCC / PRP", description: "Controles críticos", color: "slate", icon: "shield", href: "/food-safety/pcc" }
     ];
 
-    const recentEvents = [
-        { type: "RM", code: "RM-001", description: "COA açúcar validado", time: "07:20", location: "Lab RM" },
-        { type: "PL", code: "PL-240915-01", description: "Preparação tanque 03", time: "08:40", location: "Siropeira" },
-        { type: "PI", code: "INT-240915-05", description: "Brix ajustado", time: "09:15", location: "PCP" },
-        { type: "PF", code: "FIN-240915-09", description: "Envase PET 2", time: "10:50", location: "Produção" },
-        { type: "NC", code: "NC-4826", description: "NC-4826 aberta", time: "11:05", location: "Qualidade" },
-        { type: "PCC", code: "PCC-14", description: "PCC-14 inspecionado", time: "11:30", location: "Food Safety" }
-    ];
+    useEffect(() => {
+        loadData();
+    }, []);
 
-    const productionChains = [
-        {
-            id: "1",
-            lote_pai: "PL-240915-01",
-            lote_pai_id: "uuid-pl-01",
-            rm: "RM-ACUC-4412",
-            rm_id: "uuid-rm-01",
-            pi: "INT-240915-05",
-            pi_id: "uuid-pi-01",
-            pf: "PF-240915-09",
-            pf_id: "uuid-pf-01",
-            nc: "-",
-            pcc: "PCC 12"
-        },
-        {
-            id: "2",
-            lote_pai: "PL-240915-04",
-            lote_pai_id: "uuid-pl-02",
-            rm: "RM-AROMA-217",
-            rm_id: "uuid-rm-02",
-            pi: "INT-240915-08",
-            pi_id: "uuid-pi-02",
-            pf: "PF-240915-12",
-            pf_id: "uuid-pf-02",
-            nc: "NC-4810",
-            pcc: "07"
-        },
-        {
-            id: "3",
-            lote_pai: "PL-240915-11",
-            lote_pai_id: "uuid-pl-03",
-            rm: "RM-CHÁ-198",
-            rm_id: "uuid-rm-03",
-            pi: "INT-240915-15",
-            pi_id: "uuid-pi-03",
-            pf: "PF-240915-21",
-            pf_id: "uuid-pf-03",
-            nc: "NC-4826",
-            pcc: "PCC 14"
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            const [events, chains, statsData] = await Promise.all([
+                getRecentTraceabilityEvents(),
+                getActiveProductionChains(),
+                getTraceabilityStats()
+            ]);
+            setRecentEvents(events);
+            setProductionChains(chains);
+            setStats(statsData);
+        } catch (error) {
+            console.error('Error loading traceability data:', error);
+            toast.error('Failed to load traceability data');
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
 
     const handleSearch = () => {
         if (!searchQuery.trim()) {
             toast.error("Digite um código de lote para buscar");
             return;
         }
-        // Navigate to detail page
         router.push(`/traceability/${encodeURIComponent(searchQuery.toUpperCase())}`);
     };
 
@@ -92,23 +83,33 @@ export default function TraceabilityPage() {
     };
 
     const handleViewDetail = (id: string, type: string) => {
-        const mockLot = {
-            id,
-            code: productionChains.find(c => c.lote_pai_id === id)?.lote_pai || "LOT-UNKNOWN",
-            type: type as "production" | "intermediate" | "finished",
-            status: "active",
-            product: "Cola 2L PET",
-            created_at: new Date().toISOString(),
-            location: "Linha 1",
-            operator: "João Silva",
-            genealogy: {
-                parent: "RM-ACUC-4412",
-                children: ["INT-240915-05", "INT-240915-06"]
-            }
-        };
-        setSelectedLot(mockLot);
-        setIsDetailOpen(true);
+        const chain = productionChains.find(c => c.lote_pai_id === id);
+        if (chain) {
+            const mockLot = {
+                id,
+                code: chain.lote_pai,
+                type: type as "production" | "intermediate" | "finished",
+                status: "active",
+                product: "Product",
+                created_at: new Date().toISOString(),
+                location: "Production",
+                operator: "-",
+                genealogy: {
+                    parent: chain.rm,
+                    children: chain.pi !== '-' ? [chain.pi] : []
+                }
+            };
+            setSelectedLot(mockLot);
+            setIsDetailOpen(true);
+        }
     };
+
+    const statsDisplay = [
+        { label: "Lotes ativos", value: String(stats.activeLots), color: "blue" },
+        { label: "Eventos hoje", value: String(stats.eventsToday), color: "green" },
+        { label: "NCs abertas", value: String(stats.openNCs), color: "red" },
+        { label: "PCCs ok", value: stats.pccsOk, color: "slate" }
+    ];
 
     return (
         <AppShell>
@@ -136,9 +137,9 @@ export default function TraceabilityPage() {
                             <Download className="h-4 w-4" />
                             <span className="hidden sm:inline">Exportar</span>
                         </Button>
-                        <Button size="sm" className="gap-2" onClick={() => router.push("/traceability/PL-240915-01")}>
-                            <FileDown className="h-4 w-4" />
-                            <span className="hidden sm:inline">Abrir lote em detalhe</span>
+                        <Button size="sm" className="gap-2" onClick={() => loadData()}>
+                            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+                            <span className="hidden sm:inline">Atualizar</span>
                         </Button>
                     </div>
                 </div>
@@ -159,7 +160,7 @@ export default function TraceabilityPage() {
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             <Input
-                                placeholder="Buscar por código de lote (ex: PL-240915-01)..."
+                                placeholder="Buscar por código de lote..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -173,24 +174,27 @@ export default function TraceabilityPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <RecentEvents events={recentEvents} />
-                    <MonitoredProduction chains={productionChains} onViewDetail={handleViewDetail} />
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {[
-                        { label: "Lotes ativos", value: "3", color: "blue" },
-                        { label: "Eventos hoje", value: "6", color: "green" },
-                        { label: "NCs abertas", value: "2", color: "red" },
-                        { label: "PCCs ok", value: "14/14", color: "slate" }
-                    ].map((stat) => (
-                        <div key={stat.label} className="bg-card border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="text-2xl sm:text-3xl font-bold">{stat.value}</div>
-                            <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
+                {loading ? (
+                    <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <RecentEvents events={recentEvents} />
+                            <MonitoredProduction chains={productionChains} onViewDetail={handleViewDetail} />
                         </div>
-                    ))}
-                </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            {statsDisplay.map((stat) => (
+                                <div key={stat.label} className="bg-card border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="text-2xl sm:text-3xl font-bold">{stat.value}</div>
+                                    <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
             </div>
 
             <LotDetailModal

@@ -21,6 +21,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useServerAction } from "@/lib/hooks/useServerAction";
 import { ReagentWithStock } from "@/types/reagent";
 import { ArrowDownToLine, Calendar } from "lucide-react";
 import { getReagents } from "@/lib/queries/reagents";
@@ -33,7 +34,6 @@ interface ReagentEntryFormProps {
 }
 
 export function ReagentEntryForm({ open, onOpenChange, reagent, onSuccess }: ReagentEntryFormProps) {
-    const [loading, setLoading] = useState(false);
     const [reagents, setReagents] = useState<ReagentWithStock[]>([]);
     const [selectedReagentId, setSelectedReagentId] = useState<string>("");
     const [formData, setFormData] = useState({
@@ -67,36 +67,37 @@ export function ReagentEntryForm({ open, onOpenChange, reagent, onSuccess }: Rea
 
     const selectedReagent = reagent || reagents.find(r => r.id === selectedReagentId);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    // Create server action wrapper for reagent entry
+    const registerEntry = async (data: typeof formData) => {
         if (!selectedReagent) {
-            toast.error("Please select a reagent");
-            return;
+            throw new Error("Please select a reagent");
         }
 
-        setLoading(true);
-        try {
-            // Create stock movement entry
-            const response = await fetch("/api/reagents/movements", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    reagent_id: selectedReagent.id,
-                    movement_type: "entry",
-                    quantity: parseFloat(formData.quantity),
-                    batch_number: formData.batch_number,
-                    supplier: formData.supplier,
-                    expiry_date: formData.expiry_date || null,
-                    cost_per_unit: formData.cost_per_unit ? parseFloat(formData.cost_per_unit) : null,
-                    notes: formData.notes,
-                }),
-            });
+        const response = await fetch("/api/reagents/movements", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                reagent_id: selectedReagent.id,
+                movement_type: "entry",
+                quantity: parseFloat(data.quantity),
+                batch_number: data.batch_number,
+                supplier: data.supplier,
+                expiry_date: data.expiry_date || null,
+                cost_per_unit: data.cost_per_unit ? parseFloat(data.cost_per_unit) : null,
+                notes: data.notes,
+            }),
+        });
 
-            if (!response.ok) throw new Error("Failed to register entry");
+        if (!response.ok) throw new Error("Failed to register entry");
 
-            toast.success(`Entry registered: +${formData.quantity} ${selectedReagent.unit}`);
+        return { quantity: data.quantity, unit: selectedReagent.unit };
+    };
 
-            // Reset form
+    const { execute, loading } = useServerAction(registerEntry, {
+        successMessage: selectedReagent
+            ? `Entry registered: +${formData.quantity} ${selectedReagent.unit}`
+            : "Entry registered successfully",
+        onSuccess: () => {
             setFormData({
                 quantity: "",
                 batch_number: "",
@@ -105,15 +106,14 @@ export function ReagentEntryForm({ open, onOpenChange, reagent, onSuccess }: Rea
                 cost_per_unit: "",
                 notes: "",
             });
-
             onOpenChange(false);
             onSuccess?.();
-        } catch (error) {
-            console.error("Error registering entry:", error);
-            toast.error("Failed to register entry");
-        } finally {
-            setLoading(false);
         }
+    });
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await execute(formData);
     };
 
     return (

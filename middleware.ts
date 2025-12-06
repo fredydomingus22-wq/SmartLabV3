@@ -102,6 +102,11 @@ export async function middleware(request: NextRequest) {
         );
         const requiredRoles = matchedRoute?.[1] as string[] | undefined;
 
+        // Admin bypass - admin has full system access to ALL routes
+        if (userRole === 'admin') {
+            return response;
+        }
+
         if (requiredRoles && userRole && !requiredRoles.includes(userRole)) {
             // User doesn't have permission for this route
             const deniedUrl = new URL("/dashboard", request.url);

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,8 +17,11 @@ import {
     Clock,
     Users,
     Package,
+    Loader2,
+    AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 interface ReportTemplate {
     id: string;
@@ -30,6 +34,15 @@ interface ReportTemplate {
     color: string;
 }
 
+interface GeneratedReport {
+    id: string;
+    name: string;
+    date: string;
+    type: string;
+    format: string;
+}
+
+// Report templates are navigation config - acceptable to keep static
 const reportTemplates: ReportTemplate[] = [
     {
         id: "quality-monthly",
@@ -98,7 +111,7 @@ const reportTemplates: ReportTemplate[] = [
         icon: Package,
         frequency: "On-demand",
         category: "compliance",
-        path: "/reports/production-lot/LOT-2024-1123-001",
+        path: "/reports/production-lot/select",
         color: "bg-indigo-600",
     },
 ];
@@ -111,6 +124,59 @@ const categoryColors = {
 };
 
 export default function ReportsPage() {
+    const [loading, setLoading] = useState(true);
+    const [recentReports, setRecentReports] = useState<GeneratedReport[]>([]);
+    const [stats, setStats] = useState({
+        lastGenerated: '-',
+        lastGeneratedType: '',
+        scheduledThisWeek: 0
+    });
+    const supabase = createClient();
+
+    useEffect(() => {
+        loadReportData();
+    }, []);
+
+    const loadReportData = async () => {
+        try {
+            setLoading(true);
+
+            // Try to fetch from generated_reports table if it exists
+            const { data: reports, error } = await supabase
+                .from('generated_reports')
+                .select('id, name, type, format, created_at')
+                .order('created_at', { ascending: false })
+                .limit(5);
+
+            if (!error && reports && reports.length > 0) {
+                setRecentReports(reports.map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    date: r.created_at,
+                    type: r.type,
+                    format: r.format
+                })));
+
+                // Calculate stats from real data
+                const today = new Date();
+                const lastReport = reports[0];
+                const lastDate = new Date(lastReport.created_at);
+                const isToday = lastDate.toDateString() === today.toDateString();
+
+                setStats({
+                    lastGenerated: isToday ? 'Today' : lastDate.toLocaleDateString(),
+                    lastGeneratedType: lastReport.type,
+                    scheduledThisWeek: 0 // Would need a scheduled_reports table
+                });
+            }
+        } catch (error) {
+            // Table might not exist yet - show empty state
+            console.log('Generated reports table not available');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <AppShell>
             <div className="p-6 space-y-6">
@@ -139,8 +205,10 @@ export default function ReportsPage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">Today</div>
-                            <div className="text-xs text-muted-foreground mt-1">Quality Report</div>
+                            <div className="text-2xl font-bold">{stats.lastGenerated}</div>
+                            {stats.lastGeneratedType && (
+                                <div className="text-xs text-muted-foreground mt-1">{stats.lastGeneratedType}</div>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -151,7 +219,7 @@ export default function ReportsPage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">3</div>
+                            <div className="text-2xl font-bold">{stats.scheduledThisWeek}</div>
                             <div className="text-xs text-muted-foreground mt-1">This week</div>
                         </CardContent>
                     </Card>
@@ -230,50 +298,45 @@ export default function ReportsPage() {
                         <CardTitle>Recent Reports</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-3">
-                            {[
-                                {
-                                    name: "Quality Performance - November 2024",
-                                    date: "2024-11-22",
-                                    type: "Quality",
-                                    format: "PDF",
-                                },
-                                {
-                                    name: "Production Summary - Week 46",
-                                    date: "2024-11-20",
-                                    type: "Production",
-                                    format: "Excel",
-                                },
-                                {
-                                    name: "Reagent Consumption - October 2024",
-                                    date: "2024-11-01",
-                                    type: "Inventory",
-                                    format: "PDF",
-                                },
-                            ].map((report, idx) => (
-                                <div
-                                    key={idx}
-                                    className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <FileText className="w-5 h-5 text-blue-500" />
-                                        <div>
-                                            <div className="font-medium">{report.name}</div>
-                                            <div className="text-xs text-muted-foreground">
-                                                Generated: {new Date(report.date).toLocaleDateString()}
+                        {loading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : recentReports.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-8 text-center">
+                                <AlertCircle className="h-10 w-10 text-muted-foreground mb-3" />
+                                <p className="text-sm text-muted-foreground">No reports generated yet</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Generated reports will appear here
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {recentReports.map((report) => (
+                                    <div
+                                        key={report.id}
+                                        className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <FileText className="w-5 h-5 text-blue-500" />
+                                            <div>
+                                                <div className="font-medium">{report.name}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    Generated: {new Date(report.date).toLocaleDateString()}
+                                                </div>
                                             </div>
                                         </div>
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="outline">{report.type}</Badge>
+                                            <Badge variant="outline">{report.format}</Badge>
+                                            <Button variant="ghost" size="sm">
+                                                <Download className="w-4 h-4" />
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Badge variant="outline">{report.type}</Badge>
-                                        <Badge variant="outline">{report.format}</Badge>
-                                        <Button variant="ghost" size="sm">
-                                            <Download className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

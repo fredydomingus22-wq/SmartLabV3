@@ -27,8 +27,7 @@ export default function ReviewSamplesPage() {
                 .from("samples")
                 .select(`
                     *,
-                    production_lot:production_lots(code),
-                    raw_material_lot:raw_material_lots(lot_code)
+                    sample_types:sample_types(code, name)
                 `)
                 .eq("status", "reviewed")
                 .order("created_at", { ascending: false });
@@ -47,12 +46,7 @@ export default function ReviewSamplesPage() {
         if (!confirm(`Are you sure you want to ${action.toUpperCase()} this sample?`)) return;
 
         try {
-            const newStatus = action === "approve" ? "approved" : "rejected"; // Note: 'rejected' might need to be added to types if not present, usually 'failed' or 'rejected'
-            // Check types/lims.ts: status: 'pending' | 'in_analysis' | 'reviewed' | 'approved'
-            // If rejected isn't there, we might need to add it or use a different status.
-            // Let's assume 'approved' for now and maybe 'in_analysis' for reject (send back)?
-            // Or better, let's check types.
-
+            const newStatus = action === "approve" ? "approved" : "rejected";
             await updateSampleStatus(id, newStatus as any);
             toast.success(`Sample ${action}d successfully`);
             fetchPendingReviews();
@@ -81,25 +75,25 @@ export default function ReviewSamplesPage() {
                     <div className="grid gap-4">
                         {samples.map((sample) => (
                             <Card key={sample.id}>
-                                <CardContent className="p-6 flex items-center justify-between">
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-lg">{sample.code}</h3>
-                                            <Badge variant="outline">{sample.sample_type.replace("_", " ")}</Badge>
-                                            {sample.priority === "urgent" && <Badge variant="destructive">Urgent</Badge>}
+                                <CardHeader>
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <CardTitle className="text-lg">{sample.code}</CardTitle>
+                                            <div className="flex gap-2 mt-2 text-sm text-muted-foreground">
+                                                <span>{(sample as any).sample_types?.name}</span>
+                                                {sample.production_lot_id && (
+                                                    <span>Lot: {(sample as any).production_lot?.code}</span>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="text-sm text-muted-foreground flex items-center gap-4">
-                                            <span className="flex items-center gap-1">
-                                                <Clock className="h-3 w-3" />
-                                                {new Date(sample.created_at).toLocaleDateString()}
-                                            </span>
-                                            {sample.production_lot_id && (
-                                                <span>Lot: {(sample as any).production_lot?.code}</span>
-                                            )}
-                                        </div>
+                                        <Badge variant="secondary">
+                                            <Clock className="mr-1 h-3 w-3" />
+                                            Pending Review
+                                        </Badge>
                                     </div>
-
-                                    <div className="flex gap-2">
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="flex gap-2 justify-end">
                                         <Button variant="outline" size="sm">
                                             <FileText className="mr-2 h-4 w-4" />
                                             View Results
