@@ -42,7 +42,7 @@ const sidebarGroups = [
             { name: "Lotes de Produção", href: "/production-lots", icon: Factory },
             { name: "Tanques / Produto Intermédio", href: "/intermediate-lots", icon: Boxes },
             { name: "Produto Final", href: "/finished-lots", icon: Package },
-            { name: "Análises de Linha", href: "/line-analysis", icon: TestTube },
+
             { name: "Configurações de Produção", href: "/production-settings", icon: Settings },
         ],
         defaultExpanded: true,
