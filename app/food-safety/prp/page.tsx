@@ -1,8 +1,11 @@
+import { FoodSafetyBoard } from "../components/FoodSafetyBoard";
+
 export default function PRPPage() {
     return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold tracking-tight">PRP Management</h1>
-            <p className="text-muted-foreground">Prerequisite Programs</p>
-        </div>
-    )
+        <FoodSafetyBoard
+            type="prp"
+            title="PRP Management"
+            description="Programas Pré-Requisito com controlos de higiene, limpeza e infraestrutura."
+        />
+    );
 }
