@@ -8,13 +8,22 @@ describe("productionLotSchema", () => {
             factory_id: "factory-1",
             production_line: "Line A",
             shift: "A",
-            status: "open",
+            status: "active",
         });
 
         expect(result.success).toBe(true);
         if (result.success) {
             expect(result.data.code).toBe("PL-2024-001");
         }
+    });
+
+    it("defaults status to draft when not provided", () => {
+        const result = productionLotSchema.parse({
+            code: "PL-2024-002",
+            product_id: "prod-2",
+        });
+
+        expect(result.status).toBe("draft");
     });
 
     it("rejects invalid payloads", () => {
